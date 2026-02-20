@@ -7,12 +7,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ClientCreateDto {
+public class ClientPatchDto {
     private String firstName;
     private String middleName;
     private String lastName;
 
     private String phoneNumber;
     private String email;
-    private String password;
 }

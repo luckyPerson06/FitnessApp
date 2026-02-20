@@ -1,6 +1,7 @@
 package ru.univ.grain.mapper;
 
 import ru.univ.grain.domain.Client;
+import ru.univ.grain.domain.ClientStatus;
 import ru.univ.grain.dto.ClientCreateDto;
 import ru.univ.grain.dto.ClientResponseDto;
 
@@ -13,6 +14,7 @@ public class ClientMapper {
                 .id(client.getId())
                 .fullName(client.getLastName() + " " + client.getFirstName())
                 .phoneNumber(client.getPhoneNumber())
+                .status(client.getStatus())
                 .build();
     }
 
@@ -24,6 +26,8 @@ public class ClientMapper {
                 .lastName(dto.getLastName())
                 .phoneNumber(dto.getPhoneNumber())
                 .email(dto.getEmail())
+                .password(dto.getPassword())
+                .status(ClientStatus.ACTIVE)
                 .build();
     }
 }

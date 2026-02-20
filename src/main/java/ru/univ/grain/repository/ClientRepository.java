@@ -17,15 +17,11 @@ public class ClientRepository {
         return client;
     }
 
-    public List<Client> findAll() {
-        return new ArrayList<>(storage);
-    }
-
     public Client findById(long id) {
         return storage.stream()
                 .filter(client -> client.getId() == id)
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new RuntimeException("Client not found"));
     }
 
 
@@ -33,6 +29,10 @@ public class ClientRepository {
         return storage.stream()
                 .filter(client -> client.getLastName().equalsIgnoreCase(lastName))
                 .toList();
+    }
+
+    public void deleteById(long id) {
+        storage.removeIf(client -> client.getId() == id);
     }
 
 }

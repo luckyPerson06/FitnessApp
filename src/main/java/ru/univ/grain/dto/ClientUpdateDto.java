@@ -8,9 +8,13 @@ import ru.univ.grain.domain.ClientStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ClientResponseDto {
-    private long id;
-    private String fullName;
+public class ClientUpdateDto {
+    private String firstName;
+    private String middleName;
+    private String lastName;
+
     private String phoneNumber;
+    private String email;
+
     private ClientStatus status;
 }
