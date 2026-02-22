@@ -10,7 +10,9 @@ import ru.univ.grain.domain.ClientStatus;
 @Builder
 public class ClientResponseDto {
     private long id;
+
     private String fullName;
     private String phoneNumber;
+
     private ClientStatus status;
 }

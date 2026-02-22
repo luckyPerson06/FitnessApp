@@ -4,6 +4,19 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Sensitive ###
+application-*.properties
+!application.properties
+.env
+*.env
+*.yml
+!application.yml
+*.log
+postgresql.log
+pg_log/
+*.lock
+postmaster.pid
+
 ### STS ###
 .apt_generated
 .classpath
@@ -31,3 +44,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### System ###
+.DS_Store
+Thumbs.db
+desktop.ini

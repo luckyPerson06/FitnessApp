@@ -21,7 +21,7 @@ public class ClientService {
     }
 
     public Client updateClient(long id, ClientUpdateDto dto) {
-        final Client client = repository.findById(id);
+        final Client client = repository.findFirstById(id);
 
         client.setFirstName(dto.getFirstName());
         client.setMiddleName(dto.getMiddleName());
@@ -30,7 +30,7 @@ public class ClientService {
         client.setEmail(dto.getEmail());
         client.setStatus(dto.getStatus());
 
-        return client;
+        return repository.save(client);
     }
 
     public Client patch(long id, ClientPatchDto dto) {
@@ -53,15 +53,15 @@ public class ClientService {
             client.setEmail(dto.getEmail());
         }
 
-        return client;
+        return repository.save(client);
     }
 
     public Client getClientById(long id) {
-        return repository.findById(id);
+        return repository.findFirstById(id);
     }
 
     public List<Client> getClientByLastName(String lastName) {
-        return repository.findByLastName(lastName);
+        return repository.findByLastNameIgnoreCase(lastName);
     }
 
 
