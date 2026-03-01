@@ -6,58 +6,131 @@
 <module name="Checker">
 
     <property name="charset" value="UTF-8"/>
-    <property name="severity" value="warning"/>
+    <property name="severity" value="error"/>
 
     <module name="TreeWalker">
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="PackageName"/>
 
-        <module name="TypeName"/>
+        <module name="TypeName">
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="MethodName"/>
 
-        <module name="ParameterName"/>
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="LocalVariableName"/>
 
-        <module name="MemberName"/>
+        <module name="ParameterName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="ConstantName"/>
 
-        <module name="NeedBraces"/>
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="LeftCurly"/>
 
-        <module name="RightCurly"/>
+        <module name="MemberName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="WhitespaceAfter"/>
 
-        <module name="WhitespaceAround"/>
+        <module name="ConstantName">
+            <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="NoWhitespaceAfter"/>
 
-        <module name="NoWhitespaceBefore"/>
+        <module name="NeedBraces">
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="EmptyStatement"/>
 
-        <module name="EqualsHashCode"/>
+        <module name="LeftCurly">
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="UnusedImports"/>
 
-        <module name="AvoidNestedBlocks"/>
+        <module name="RightCurly">
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="FinalLocalVariable"/>
 
-        <module name="FallThrough"/>
+        <module name="WhitespaceAfter">
+            <property name="severity" value="error"/>
+        </module>
 
-        <module name="UpperEll"/>
+
+        <module name="WhitespaceAround">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="NoWhitespaceAfter">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="NoWhitespaceBefore">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="EmptyStatement">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="EqualsHashCode">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="UnusedImports">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="AvoidNestedBlocks">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="FinalLocalVariable">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="FallThrough">
+            <property name="severity" value="error"/>
+        </module>
+
+
+        <module name="UpperEll">
+            <property name="severity" value="error"/>
+        </module>
 
     </module>
 
-    <module name="NewlineAtEndOfFile"/>
+
+    <module name="NewlineAtEndOfFile">
+        <property name="severity" value="error"/>
+    </module>
+
 
     <module name="FileTabCharacter">
         <property name="eachLine" value="false"/>
+        <property name="severity" value="error"/>
     </module>
 
 </module>

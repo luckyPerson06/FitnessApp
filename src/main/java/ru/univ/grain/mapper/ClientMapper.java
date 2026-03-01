@@ -1,33 +1,29 @@
 package ru.univ.grain.mapper;
 
-import ru.univ.grain.domain.Client;
-import ru.univ.grain.domain.ClientStatus;
-import ru.univ.grain.dto.ClientCreateDto;
+import org.mapstruct.*;
+import ru.univ.grain.dto.ClientDto;
+import ru.univ.grain.dto.ClientPatchDto;
 import ru.univ.grain.dto.ClientResponseDto;
+import ru.univ.grain.entities.Client;
 
-import org.springframework.stereotype.Component;
+@Mapper(componentModel = "spring")
+public interface ClientMapper {
 
-@Component
-public class ClientMapper {
-    public ClientResponseDto toDto(Client client) {
-        return ClientResponseDto.builder()
-                .id(client.getId())
-                .fullName(client.getLastName() + " " + client.getFirstName())
-                .phoneNumber(client.getPhoneNumber())
-                .status(client.getStatus())
-                .build();
-    }
+    @Mapping(target = "fullName", expression = "java(client.getLastName()"
+            + " + \" \" + client.getFirstName() + (client.getMiddleName()"
+            + " != null ? \" \" + client.getMiddleName() : \"\"))")
+    ClientResponseDto toResponseDto(Client client);
 
-    public Client toEntity(ClientCreateDto dto, long id) {
-        return Client.builder()
-                .id(id)
-                .firstName(dto.getFirstName())
-                .middleName(dto.getMiddleName())
-                .lastName(dto.getLastName())
-                .phoneNumber(dto.getPhoneNumber())
-                .email(dto.getEmail())
-                .password(dto.getPassword())
-                .status(ClientStatus.ACTIVE)
-                .build();
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "status", constant = "ACTIVE")
+    @Mapping(target = "subscriptions", ignore = true)
+    @Mapping(target = "visits", ignore = true)
+    Client toEntity(ClientDto dto);
+
+    @BeanMapping(nullValuePropertyMappingStrategy =
+            NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "subscriptions", ignore = true)
+    void updateEntity(ClientPatchDto dto, @MappingTarget Client client);
+
 }
