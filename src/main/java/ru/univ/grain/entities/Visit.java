@@ -53,5 +53,20 @@ public class Visit {
     private VisitStatus status;
 
     @Version
-    private Integer version;
+    private Integer version = 0;
+
+    @PreRemove
+    private void beforeDelete() {
+        if (client != null) {
+            client.getVisits().remove(this);
+        }
+
+        if (workoutSession != null) {
+            workoutSession.getVisits().remove(this);
+        }
+
+        this.subscription = null;
+    }
+
+
 }

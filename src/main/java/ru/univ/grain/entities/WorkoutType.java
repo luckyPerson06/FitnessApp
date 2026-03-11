@@ -44,6 +44,23 @@ public class WorkoutType {
     @ManyToMany(mappedBy = "allowedWorkoutTypes", fetch = FetchType.LAZY)
     private List<Subscription> subscriptions;
 
-    @OneToMany(mappedBy = "workoutType", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workoutType", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutSession> workoutSessions;
+
+    @PreRemove
+    private void beforeDelete() {
+        for (WorkoutSession session : workoutSessions) {
+            session.setWorkoutType(null);
+        }
+
+        for (Trainer trainer : trainers) {
+            trainer.getSpecializations().remove(this);
+        }
+
+        for (Subscription subscription : subscriptions) {
+            subscription.getAllowedWorkoutTypes().remove(this);
+        }
+    }
+
 }

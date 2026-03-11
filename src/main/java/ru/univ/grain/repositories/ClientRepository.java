@@ -10,7 +10,7 @@ import ru.univ.grain.entities.ClientStatus;
 import java.util.List;
 
 @Repository
-public interface ClientRepository extends JpaRepository<Client, Long> {
+public interface    ClientRepository extends JpaRepository<Client, Long> {
 
     List<Client> findByLastNameIgnoreCase(String lastName);
 

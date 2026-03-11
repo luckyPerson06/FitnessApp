@@ -221,7 +221,7 @@ public class ClientService {
         }
 
         final Subscription subscription = subscriptionMapper.toEntity(subscriptionDto);
-        final Subscription savedSubscription = subscriptionRepository.save(subscription); // АБОНЕМЕНТ В БД!
+        final Subscription savedSubscription = subscriptionRepository.save(subscription);
 
         savedClient.getSubscriptions().add(savedSubscription);
         clientRepository.save(savedClient);

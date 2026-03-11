@@ -60,9 +60,21 @@ public class WorkoutSession {
     private String colorCode;
 
     @OneToMany(mappedBy = "workoutSession", fetch = FetchType.LAZY,
-                cascade = CascadeType.ALL)
+                cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Visit> visits;
 
     @Version
-    private Integer version;
+    private Integer version = 0;
+
+    @PreRemove
+    private void beforeDelete() {
+        if (trainer != null) {
+            trainer.getWorkoutSessions().remove(this);
+        }
+
+        if (workoutType != null) {
+            workoutType.getWorkoutSessions().remove(this);
+        }
+    }
+
 }

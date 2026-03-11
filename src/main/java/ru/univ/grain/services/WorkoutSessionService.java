@@ -1,8 +1,15 @@
 package ru.univ.grain.services;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.univ.grain.cache.SessionCache;
+import ru.univ.grain.cache.SessionSearchKey;
 import ru.univ.grain.entities.*;
 import ru.univ.grain.dto.WorkoutSessionDto;
 import ru.univ.grain.mapper.WorkoutSessionMapper;
@@ -26,6 +33,13 @@ public class WorkoutSessionService {
     private final WorkoutTypeRepository workoutTypeRepository;
     private final VisitRepository visitRepository;
     private final WorkoutSessionMapper workoutSessionMapper;
+    private final SessionCache sessionCache;
+    private  WorkoutSessionService self;
+
+    @PostConstruct
+    public void init() {
+        this.self = this;
+    }
 
     @Transactional(readOnly = true)
     public List<WorkoutSessionDto> getAllSessions() {
@@ -66,6 +80,9 @@ public class WorkoutSessionService {
         session.setWorkoutType(workoutType);
 
         final WorkoutSession saved = workoutSessionRepository.save(session);
+
+        sessionCache.clearByTrainer(dto.getTrainerId());
+
         return workoutSessionMapper.toDto(saved);
     }
 
@@ -101,6 +118,9 @@ public class WorkoutSessionService {
         existing.setWorkoutType(workoutType);
 
         final WorkoutSession updated = workoutSessionRepository.save(existing);
+
+        sessionCache.clearByTrainer(dto.getTrainerId());
+
         return workoutSessionMapper.toDto(updated);
     }
 
@@ -120,7 +140,11 @@ public class WorkoutSessionService {
             return false;
         }
 
+        final Long trainerId = session.getTrainer().getId();
         workoutSessionRepository.deleteById(id);
+
+        sessionCache.clearByTrainer(trainerId);
+
         return true;
     }
 
@@ -240,7 +264,6 @@ public class WorkoutSessionService {
             return null;
         }
 
-
         if (status == WorkoutSessionStatus.CANCELLED &&
                 session.getStatus() != WorkoutSessionStatus.COMPLETED) {
             final LocalDateTime now = LocalDateTime.now();
@@ -252,7 +275,57 @@ public class WorkoutSessionService {
 
         session.setStatus(status);
         final WorkoutSession updated = workoutSessionRepository.save(session);
+
+        if (session.getTrainer() != null) {
+            sessionCache.clearByTrainer(session.getTrainer().getId());
+        }
+
         return workoutSessionMapper.toDto(updated);
     }
 
+    private Pageable createPageable(int page, int size, String sortField) {
+        return PageRequest.of(page, size, Sort.by(sortField).ascending());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionDto> getSessionsByTrainerAndDay(
+            Long trainerId, DayOfWeek dayOfWeek,
+            int page, int size) {
+
+        final Pageable pageable = createPageable(page, size, "startTime");
+
+        return workoutSessionRepository.findByTrainerAndDay(trainerId, dayOfWeek, pageable)
+                .map(workoutSessionMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionDto> getSessionsByTrainerAndDayCached(
+            Long trainerId, DayOfWeek dayOfWeek,
+            int page, int size) {
+
+        final SessionSearchKey key = new SessionSearchKey(trainerId, dayOfWeek, page, size, "startTime");
+
+        final Page<WorkoutSessionDto> cached = sessionCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+       final Page<WorkoutSessionDto> result = self.getSessionsByTrainerAndDay(trainerId, dayOfWeek, page, size);
+
+        sessionCache.put(key, result);
+
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionDto> getSessionsByTrainerAndDayNative(
+            Long trainerId, DayOfWeek dayOfWeek,
+            int page, int size) {
+
+        final Pageable pageable = createPageable(page, size, "start_time");
+        final String dayOfWeekStr = dayOfWeek.name();
+
+        return workoutSessionRepository.findByTrainerAndDayNative(trainerId, dayOfWeekStr, pageable)
+                .map(workoutSessionMapper::toDto);
+    }
 }

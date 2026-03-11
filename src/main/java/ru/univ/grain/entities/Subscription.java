@@ -49,7 +49,7 @@ public class Subscription {
     @Column(nullable = false, length = 20)
     private SubscriptionStatus status;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "subscription_workout_types",
             joinColumns = @JoinColumn(name = "subscription_id"),
@@ -65,4 +65,18 @@ public class Subscription {
 
     @ManyToMany(mappedBy = "subscriptions", fetch = FetchType.LAZY)
     private List<Client> clients;
+
+
+    @PreRemove
+    private void removeAssociations() {
+
+        for (Client client : clients) {
+            client.getSubscriptions().remove(this);
+        }
+
+        for (WorkoutType workoutType : allowedWorkoutTypes) {
+            workoutType.getSubscriptions().remove(this);
+        }
+    }
+
 }

@@ -2,6 +2,7 @@ package ru.univ.grain.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -128,7 +129,6 @@ public class WorkoutSessionController {
             @PathVariable final Long id,
             @Valid @RequestBody final WorkoutSessionDto dto) {
 
-        // Для PUT все поля обязательны
         if (dto.getTrainerId() == null ||
                 dto.getWorkoutTypeId() == null ||
                 dto.getDayOfWeek() == null ||
@@ -174,4 +174,34 @@ public class WorkoutSessionController {
         final boolean deleted = workoutSessionService.deleteSession(id);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
+
+
+    @GetMapping("/by-trainer-and-day")
+    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerAndDay(
+            @RequestParam Long trainerId, @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    ) {
+        final Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerAndDayCached(
+                trainerId,
+                dayOfWeek,
+                page,
+                size
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/by-trainer-and-day-native")
+    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerAndDayNative(
+            @RequestParam Long trainerId, @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    ) {
+        final Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerAndDayNative(
+                trainerId,
+                dayOfWeek,
+                page,
+                size
+        );
+        return ResponseEntity.ok(result);
+    }
+
 }

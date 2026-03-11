@@ -48,7 +48,7 @@ public class Client {
     @Column(nullable = false)
     private ClientStatus status;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "client_subscriptions",
             joinColumns = @JoinColumn(name = "client_id"),
@@ -65,4 +65,11 @@ public class Client {
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY,
             cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Visit> visits;
+
+    @PreRemove
+    private void beforeDelete() {
+        for (Subscription subscription : subscriptions) {
+            subscription.getClients().remove(this);
+        }
+    }
 }

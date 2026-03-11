@@ -3,11 +3,9 @@ package ru.univ.grain.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.univ.grain.entities.Subscription;
-import ru.univ.grain.entities.SubscriptionStatus;
-import ru.univ.grain.entities.SubscriptionType;
-import ru.univ.grain.entities.WorkoutType;
+import ru.univ.grain.entities.*;
 import ru.univ.grain.repositories.SubscriptionRepository;
+import ru.univ.grain.repositories.VisitRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 import ru.univ.grain.dto.SubscriptionDto;
 import ru.univ.grain.mapper.SubscriptionMapper;
@@ -21,6 +19,7 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final WorkoutTypeRepository workoutTypeRepository;
     private final SubscriptionMapper subscriptionMapper;
+    private final VisitRepository visitRepository;
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getAllSubscriptions() {
@@ -78,11 +77,19 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public boolean deleteSubscription(final Long id) {
-        if (!subscriptionRepository.existsById(id)) {
+    public boolean deleteSubscription(Long id) {
+        final Subscription subscription = subscriptionRepository.findById(id).orElse(null);
+        if (subscription == null) {
             return false;
         }
-        subscriptionRepository.deleteById(id);
+
+        final List<Visit> visits = visitRepository.findBySubscriptionId(id);
+
+        for (Visit visit : visits) {
+            visit.setSubscription(null);
+        }
+
+        subscriptionRepository.delete(subscription);
         return true;
     }
 

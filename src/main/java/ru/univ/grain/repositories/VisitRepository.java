@@ -16,6 +16,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
 
     List<Visit> findByWorkoutSessionId(Long workoutSessionId);
 
+    List<Visit> findBySubscriptionId(Long subscriptionId);
+
     List<Visit> findByVisitTimeBetween(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT COUNT(v) FROM Visit v WHERE v.subscription.id = :subscriptionId AND v.status = 'ATTENDED'")

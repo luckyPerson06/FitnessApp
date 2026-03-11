@@ -39,7 +39,7 @@ public class Trainer {
     @Column(nullable = false, length = 20)
     private TrainerStatus status;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "trainer_specializations",
             joinColumns = @JoinColumn(name = "trainer_id"),
@@ -53,6 +53,18 @@ public class Trainer {
     )
     private Set<WorkoutType> specializations;
 
-    @OneToMany(mappedBy = "trainer", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "trainer", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<WorkoutSession> workoutSessions;
+
+    @PreRemove
+    private void beforeDelete() {
+        for (WorkoutSession session : workoutSessions) {
+            session.setTrainer(null);
+        }
+
+        for (WorkoutType type : specializations) {
+            type.getTrainers().remove(this);
+        }
+    }
 }
