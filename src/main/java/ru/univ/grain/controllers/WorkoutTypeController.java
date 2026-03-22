@@ -20,97 +20,72 @@ public class WorkoutTypeController {
 
     @GetMapping
     public ResponseEntity<List<WorkoutTypeDto>> getAllWorkoutTypes() {
-        final List<WorkoutTypeDto> workoutTypes = workoutTypeService.getAllWorkoutTypes();
-        return ResponseEntity.ok(workoutTypes);
+        return ResponseEntity.ok(workoutTypeService.getAllWorkoutTypes());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeById(@PathVariable final Long id) {
-        final WorkoutTypeDto workoutType = workoutTypeService.getWorkoutTypeById(id);
-        return workoutType != null ? ResponseEntity.ok(workoutType) : ResponseEntity.notFound().build();
+    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeById(@PathVariable Long id) {
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypeById(id));
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeByName(@PathVariable final String name) {
-        final WorkoutTypeDto workoutType = workoutTypeService.getWorkoutTypeByName(name);
-        return workoutType != null ? ResponseEntity.ok(workoutType) : ResponseEntity.notFound().build();
+    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeByName(@PathVariable String name) {
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypeByName(name));
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<WorkoutTypeDto>> getActiveWorkoutTypes() {
-        final List<WorkoutTypeDto> workoutTypes = workoutTypeService.getActiveWorkoutTypes();
-        return ResponseEntity.ok(workoutTypes);
+        return ResponseEntity.ok(workoutTypeService.getActiveWorkoutTypes());
     }
 
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByCategory(@PathVariable final WorkoutCategory category) {
-        final List<WorkoutTypeDto> workoutTypes = workoutTypeService.getWorkoutTypesByCategory(category);
-        return ResponseEntity.ok(workoutTypes);
+    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByCategory(@PathVariable WorkoutCategory category) {
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypesByCategory(category));
     }
 
     @GetMapping("/trainer/{trainerId}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByTrainer(@PathVariable final Long trainerId) {
-        final List<WorkoutTypeDto> workoutTypes = workoutTypeService.getWorkoutTypesByTrainer(trainerId);
-        return ResponseEntity.ok(workoutTypes);
+    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByTrainer(@PathVariable Long trainerId) {
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypesByTrainer(trainerId));
     }
 
     @GetMapping("/subscription/{subscriptionId}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesBySubscription(@PathVariable final Long subscriptionId) {
-        final List<WorkoutTypeDto> workoutTypes = workoutTypeService.getWorkoutTypesBySubscription(subscriptionId);
-        return ResponseEntity.ok(workoutTypes);
+    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesBySubscription(@PathVariable Long subscriptionId) {
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypesBySubscription(subscriptionId));
     }
 
     @PostMapping
-    public ResponseEntity<WorkoutTypeDto> createWorkoutType(@Valid @RequestBody final WorkoutTypeDto dto) {
-        final WorkoutTypeDto created = workoutTypeService.createWorkoutType(dto);
-        return created != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(created)
-                : ResponseEntity.status(HttpStatus.CONFLICT).build();
+    public ResponseEntity<WorkoutTypeDto> createWorkoutType(@Valid @RequestBody WorkoutTypeDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutTypeService.createWorkoutType(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<WorkoutTypeDto> updateWorkoutType(
-            @PathVariable final Long id,
-            @Valid @RequestBody final WorkoutTypeDto dto) {
-
-        if (dto.getName() == null || dto.getName().isBlank() ||
-                dto.getCategory() == null ||
-                dto.getIsActive() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final WorkoutTypeDto updated = workoutTypeService.updateWorkoutType(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody WorkoutTypeDto dto) {
+        return ResponseEntity.ok(workoutTypeService.updateWorkoutType(id, dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<WorkoutTypeDto> patchWorkoutType(
-            @PathVariable final Long id,
-            @Valid @RequestBody final WorkoutTypeDto dto) {
-
-        final WorkoutTypeDto updated = workoutTypeService.updateWorkoutType(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody WorkoutTypeDto dto) {
+        return ResponseEntity.ok(workoutTypeService.updateWorkoutType(id, dto));
     }
 
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<WorkoutTypeDto> deactivateWorkoutType(@PathVariable final Long id) {
-        final boolean deactivated = workoutTypeService.deactivateWorkoutType(id);
-        if (!deactivated) {
-            return ResponseEntity.notFound().build();
-        }
-        final WorkoutTypeDto workoutType = workoutTypeService.getWorkoutTypeById(id);
-        return ResponseEntity.ok(workoutType);
+    public ResponseEntity<WorkoutTypeDto> deactivateWorkoutType(@PathVariable Long id) {
+        workoutTypeService.deactivateWorkoutType(id);
+        return ResponseEntity.ok(workoutTypeService.getWorkoutTypeById(id));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkoutType(@PathVariable final Long id) {
-        final boolean deleted = workoutTypeService.deleteWorkoutType(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteWorkoutType(@PathVariable Long id) {
+        workoutTypeService.deleteWorkoutType(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/exists/name/{name}")
-    public ResponseEntity<Boolean> existsByName(@PathVariable final String name) {
-        final boolean exists = workoutTypeService.existsByName(name);
-        return ResponseEntity.ok(exists);
+    public ResponseEntity<Boolean> existsByName(@PathVariable String name) {
+        return ResponseEntity.ok(workoutTypeService.existsByName(name));
     }
 }

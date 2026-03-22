@@ -24,184 +24,146 @@ public class WorkoutSessionController {
 
     @GetMapping
     public ResponseEntity<List<WorkoutSessionDto>> getAllSessions() {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getAllSessions();
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(workoutSessionService.getAllSessions());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<WorkoutSessionDto> getSessionById(@PathVariable final Long id) {
-        final WorkoutSessionDto session = workoutSessionService.getSessionById(id);
-        return session != null ? ResponseEntity.ok(session) : ResponseEntity.notFound().build();
+    public ResponseEntity<WorkoutSessionDto> getSessionById(@PathVariable Long id) {
+        return ResponseEntity.ok(workoutSessionService.getSessionById(id));
     }
 
     @GetMapping("/trainer/{trainerId}")
-    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByTrainer(@PathVariable final Long trainerId) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getSessionsByTrainer(trainerId);
-        return ResponseEntity.ok(sessions);
+    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByTrainer(@PathVariable Long trainerId) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByTrainer(trainerId));
     }
 
     @GetMapping("/workout-type/{workoutTypeId}")
-    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByWorkoutType(@PathVariable final Long workoutTypeId) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getSessionsByWorkoutType(workoutTypeId);
-        return ResponseEntity.ok(sessions);
+    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByWorkoutType(@PathVariable Long workoutTypeId) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByWorkoutType(workoutTypeId));
     }
 
     @GetMapping("/day/{dayOfWeek}")
-    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByDay(@PathVariable final DayOfWeek dayOfWeek) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getSessionsByDay(dayOfWeek);
-        return ResponseEntity.ok(sessions);
+    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByDay(@PathVariable DayOfWeek dayOfWeek) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByDay(dayOfWeek));
     }
 
     @GetMapping("/day/{dayOfWeek}/active")
-    public ResponseEntity<List<WorkoutSessionDto>> getActiveSessionsByDay(@PathVariable final DayOfWeek dayOfWeek) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getActiveSessionsByDay(dayOfWeek);
-        return ResponseEntity.ok(sessions);
+    public ResponseEntity<List<WorkoutSessionDto>> getActiveSessionsByDay(@PathVariable DayOfWeek dayOfWeek) {
+        return ResponseEntity.ok(workoutSessionService.getActiveSessionsByDay(dayOfWeek));
     }
 
     @GetMapping("/today")
     public ResponseEntity<List<WorkoutSessionDto>> getTodaySessions() {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getTodaySessions();
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(workoutSessionService.getTodaySessions());
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByStatus(@PathVariable final WorkoutSessionStatus status) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getSessionsByStatus(status);
-        return ResponseEntity.ok(sessions);
+    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByStatus(@PathVariable WorkoutSessionStatus status) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByStatus(status));
     }
 
     @GetMapping("/scheduled")
     public ResponseEntity<List<WorkoutSessionDto>> getAllScheduledSessions() {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getAllScheduledSessions();
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(workoutSessionService.getAllScheduledSessions());
     }
 
     @GetMapping("/time")
     public ResponseEntity<List<WorkoutSessionDto>> getSessionsByTime(
-            @RequestParam final DayOfWeek dayOfWeek,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime time) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.getSessionsByTime(dayOfWeek, time);
-        return ResponseEntity.ok(sessions);
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime time) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByTime(dayOfWeek, time));
     }
 
     @GetMapping("/check-availability")
     public ResponseEntity<Boolean> isTrainerAvailable(
-            @RequestParam final Long trainerId,
-            @RequestParam final DayOfWeek dayOfWeek,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime end) {
-        final boolean available = workoutSessionService.isTrainerAvailable(trainerId, dayOfWeek, start, end);
-        return ResponseEntity.ok(available);
+            @RequestParam Long trainerId,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
+        return ResponseEntity.ok(workoutSessionService.isTrainerAvailable(trainerId, dayOfWeek, start, end));
     }
 
     @GetMapping("/overlapping")
     public ResponseEntity<List<WorkoutSessionDto>> findOverlappingSessions(
-            @RequestParam final Long trainerId,
-            @RequestParam final DayOfWeek dayOfWeek,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime end) {
-        final List<WorkoutSessionDto> sessions = workoutSessionService.findOverlappingSessions(trainerId, dayOfWeek, start, end);
-        return ResponseEntity.ok(sessions);
+            @RequestParam Long trainerId,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
+        return ResponseEntity.ok(workoutSessionService.findOverlappingSessions(trainerId, dayOfWeek, start, end));
     }
 
     @GetMapping("/{sessionId}/booked-count")
-    public ResponseEntity<Long> getBookedCount(@PathVariable final Long sessionId) {
-        final long count = workoutSessionService.getBookedCount(sessionId);
-        return ResponseEntity.ok(count);
+    public ResponseEntity<Long> getBookedCount(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(workoutSessionService.getBookedCount(sessionId));
     }
 
     @GetMapping("/{sessionId}/available-spots")
-    public ResponseEntity<Boolean> hasAvailableSpots(@PathVariable final Long sessionId) {
-        final boolean available = workoutSessionService.hasAvailableSpots(sessionId);
-        return ResponseEntity.ok(available);
+    public ResponseEntity<Boolean> hasAvailableSpots(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(workoutSessionService.hasAvailableSpots(sessionId));
     }
 
     @PostMapping
-    public ResponseEntity<WorkoutSessionDto> createSession(@Valid @RequestBody final WorkoutSessionDto dto) {
-        final WorkoutSessionDto created = workoutSessionService.createSession(dto);
-        return created != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(created)
-                : ResponseEntity.badRequest().build();
+    public ResponseEntity<WorkoutSessionDto> createSession(@Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSessionService.createSession(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<WorkoutSessionDto> updateSession(
-            @PathVariable final Long id,
-            @Valid @RequestBody final WorkoutSessionDto dto) {
-
-        if (dto.getTrainerId() == null ||
-                dto.getWorkoutTypeId() == null ||
-                dto.getDayOfWeek() == null ||
-                dto.getStartTime() == null ||
-                dto.getEndTime() == null ||
-                dto.getMaxParticipants() == null ||
-                dto.getStatus() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        if (dto.getStartTime().isAfter(dto.getEndTime())) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final WorkoutSessionDto updated = workoutSessionService.updateSession(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<WorkoutSessionDto> patchSession(
-            @PathVariable final Long id,
-            @Valid @RequestBody final WorkoutSessionDto dto) {
-
-        if (dto.getStartTime() != null && dto.getEndTime() != null &&
-                dto.getStartTime().isAfter(dto.getEndTime())) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final WorkoutSessionDto updated = workoutSessionService.updateSession(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<WorkoutSessionDto> updateSessionStatus(
-            @PathVariable final Long id,
-            @RequestParam final WorkoutSessionStatus status) {
-        final WorkoutSessionDto updated = workoutSessionService.updateSessionStatus(id, status);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @RequestParam WorkoutSessionStatus status) {
+        return ResponseEntity.ok(workoutSessionService.updateSessionStatus(id, status));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSession(@PathVariable final Long id) {
-        final boolean deleted = workoutSessionService.deleteSession(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteSession(@PathVariable Long id) {
+        workoutSessionService.deleteSession(id);
+        return ResponseEntity.noContent().build();
     }
 
-
-    @GetMapping("/by-trainer-and-day")
-    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerAndDay(
-            @RequestParam Long trainerId, @RequestParam DayOfWeek dayOfWeek,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    @GetMapping("/by-trainer-name-and-day")
+    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerNameAndDay(
+            @RequestParam String trainerLastName,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        final Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerAndDayCached(
-                trainerId,
-                dayOfWeek,
-                page,
-                size
-        );
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(workoutSessionService.getSessionsByTrainerLastNameAndDay(
+                trainerLastName, dayOfWeek, page, size));
     }
 
-    @GetMapping("/by-trainer-and-day-native")
-    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerAndDayNative(
-            @RequestParam Long trainerId, @RequestParam DayOfWeek dayOfWeek,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    @GetMapping("/by-trainer-name-and-day/cached")
+    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerNameAndDayCached(
+            @RequestParam String trainerLastName,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        final Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerAndDayNative(
-                trainerId,
-                dayOfWeek,
-                page,
-                size
-        );
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(workoutSessionService.getSessionsByTrainerLastNameAndDayCached(
+                trainerLastName, dayOfWeek, page, size));
     }
 
+    @GetMapping("/by-trainer-name-and-day-native")
+    public ResponseEntity<Page<WorkoutSessionDto>> getSessionsByTrainerNameAndDayNative(
+            @RequestParam String trainerLastName,
+            @RequestParam DayOfWeek dayOfWeek,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByTrainerLastNameAndDayNative(
+                trainerLastName, dayOfWeek, page, size));
+    }
 }

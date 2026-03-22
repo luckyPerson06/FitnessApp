@@ -13,19 +13,20 @@ import ru.univ.grain.entities.ClientStatus;
 @AllArgsConstructor
 @Builder
 public class ClientResponseDto {
-    @NotNull
+
+    @NotNull(message = "ID клиента обязателен")
     private long id;
 
-    @NotBlank
+    @NotBlank(message = "ФИО клиента обязательно")
     private String fullName;
 
-    @Pattern(regexp = "^\\+?\\d{10,15}$")
+    @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Неверный формат телефона")
     private String phoneNumber;
 
-    @Email
-    @NotBlank
+    @Email(message = "Неверный формат email")
+    @NotBlank(message = "Email обязателен")
     private String email;
 
-    @NotNull
+    @NotNull(message = "Статус клиента обязателен")
     private ClientStatus status;
 }

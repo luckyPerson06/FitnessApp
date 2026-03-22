@@ -10,6 +10,7 @@ import ru.univ.grain.repositories.SubscriptionRepository;
 import ru.univ.grain.repositories.VisitRepository;
 import ru.univ.grain.dto.VisitDto;
 import ru.univ.grain.mapper.VisitMapper;
+import ru.univ.grain.exception.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -26,17 +27,33 @@ public class VisitService {
     private final SubscriptionRepository subscriptionRepository;
     private final VisitMapper visitMapper;
 
+
+    private static final String VISIT_NOT_FOUND = "Визит с id %d не найден";
+    private static final String CLIENT_NOT_FOUND = "Клиент с id %d не найден";
+    private static final String SESSION_NOT_FOUND = "Тренировка с id %d не найдена";
+    private static final String SUBSCRIPTION_NOT_FOUND = "Абонемент с id %d не найден";
+    private static final String SESSION_NOT_AVAILABLE = "Тренировка недоступна для записи";
+    private static final String WORKOUT_TYPE_NOT_ALLOWED = "Абонемент не подходит для этого типа тренировки";
+    private static final String ALREADY_BOOKED = "Вы уже записаны на эту тренировку";
+    private static final String NO_AVAILABLE_SPOTS = "Нет свободных мест на тренировке";
+    private static final String INVALID_VISIT_STATUS = "Неверный статус визита для выполнения операции";
+
     private record VisitComponents(Client client, WorkoutSession session, Subscription subscription) { }
 
     private VisitComponents loadVisitComponents(final VisitDto dto) {
-        final Client client = clientRepository.findById(dto.getClientId()).orElse(null);
-        final WorkoutSession session = workoutSessionRepository.findById(dto.getWorkoutSessionId()).orElse(null);
-        final Subscription subscription = dto.getSubscriptionId() != null ?
-                subscriptionRepository.findById(dto.getSubscriptionId()).orElse(null) : null;
+        final Client client = clientRepository.findById(dto.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(CLIENT_NOT_FOUND, dto.getClientId())));
 
-        if (client == null || session == null) {
-            return null;
-        }
+        final WorkoutSession session = workoutSessionRepository.findById(dto.getWorkoutSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, dto.getWorkoutSessionId())));
+
+        final Subscription subscription = dto.getSubscriptionId() != null
+                ? subscriptionRepository.findById(dto.getSubscriptionId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, dto.getSubscriptionId())))
+                : null;
 
         return new VisitComponents(client, session, subscription);
     }
@@ -50,17 +67,15 @@ public class VisitService {
 
     @Transactional(readOnly = true)
     public VisitDto getVisitById(final Long id) {
-        return visitRepository.findById(id)
-                .map(visitMapper::toDto)
-                .orElse(null);
+        final Visit visit = visitRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(VISIT_NOT_FOUND, id)));
+        return visitMapper.toDto(visit);
     }
 
     @Transactional
     public VisitDto createVisit(final VisitDto dto) {
         final VisitComponents components = loadVisitComponents(dto);
-        if (components == null) {
-            return null;
-        }
 
         final Visit visit = visitMapper.toEntity(dto);
         visit.setClient(components.client());
@@ -73,15 +88,11 @@ public class VisitService {
 
     @Transactional
     public VisitDto updateVisit(final Long id, final VisitDto dto) {
-        final Visit existing = visitRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return null;
-        }
+        final Visit existing = visitRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(VISIT_NOT_FOUND, id)));
 
         final VisitComponents components = loadVisitComponents(dto);
-        if (components == null) {
-            return null;
-        }
 
         visitMapper.updateEntity(dto, existing);
         existing.setClient(components.client());
@@ -93,31 +104,34 @@ public class VisitService {
     }
 
     @Transactional
-    public boolean deleteVisit(final Long id) {
-        if (!visitRepository.existsById(id)) {
-            return false;
-        }
-        visitRepository.deleteById(id);
-        return true;
+    public void deleteVisit(final Long id) {
+        final Visit visit = visitRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(VISIT_NOT_FOUND, id)));
+        visitRepository.delete(visit);
     }
 
     @Transactional
     public VisitDto bookWorkout(final Long clientId, final Long sessionId, final Long subscriptionId) {
-        final Client client = clientRepository.findById(clientId).orElse(null);
-        final WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
-        final Subscription subscription = subscriptionRepository.findById(subscriptionId).orElse(null);
+        final Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(CLIENT_NOT_FOUND, clientId)));
 
-        if (client == null || session == null || subscription == null) {
-            return null;
-        }
+        final WorkoutSession session = workoutSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, sessionId)));
+
+        final Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, subscriptionId)));
 
         if (session.getStatus() != WorkoutSessionStatus.SCHEDULED &&
                 session.getStatus() != WorkoutSessionStatus.CONFIRMED) {
-            return null;
+            throw new BusinessException(SESSION_NOT_AVAILABLE);
         }
 
         if (!subscription.getAllowedWorkoutTypes().contains(session.getWorkoutType())) {
-            return null;
+            throw new BusinessException(WORKOUT_TYPE_NOT_ALLOWED);
         }
 
         final List<Visit> existing = visitRepository.findBookedVisitsByClient(clientId);
@@ -125,13 +139,13 @@ public class VisitService {
                 .anyMatch(v -> v.getWorkoutSession().getId().equals(sessionId));
 
         if (alreadyBooked) {
-            return null;
+            throw new BusinessException(ALREADY_BOOKED);
         }
 
         final long bookedCount = visitRepository.findBookedVisitsBySession(sessionId).size();
 
         if (bookedCount >= session.getMaxParticipants()) {
-            return null;
+            throw new BusinessException(NO_AVAILABLE_SPOTS);
         }
 
         final LocalDate today = LocalDate.now();
@@ -160,13 +174,12 @@ public class VisitService {
 
     @Transactional
     public VisitDto markAttendance(final Long visitId, final boolean attended) {
-        final Visit visit = visitRepository.findById(visitId).orElse(null);
-        if (visit == null) {
-            return null;
-        }
+        final Visit visit = visitRepository.findById(visitId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(VISIT_NOT_FOUND, visitId)));
 
         if (visit.getStatus() != VisitStatus.BOOKED) {
-            return null;
+            throw new BusinessException(INVALID_VISIT_STATUS);
         }
 
         visit.setStatus(attended ? VisitStatus.ATTENDED : VisitStatus.NO_SHOW);
@@ -177,13 +190,12 @@ public class VisitService {
 
     @Transactional
     public VisitDto cancelBooking(final Long visitId) {
-        final Visit visit = visitRepository.findById(visitId).orElse(null);
-        if (visit == null) {
-            return null;
-        }
+        final Visit visit = visitRepository.findById(visitId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(VISIT_NOT_FOUND, visitId)));
 
         if (visit.getStatus() != VisitStatus.BOOKED) {
-            return null;
+            throw new BusinessException(INVALID_VISIT_STATUS);
         }
 
         visit.setStatus(VisitStatus.CANCELLED);

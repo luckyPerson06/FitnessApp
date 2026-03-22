@@ -12,6 +12,9 @@ import ru.univ.grain.mapper.ClientMapper;
 import ru.univ.grain.mapper.SubscriptionMapper;
 import ru.univ.grain.repositories.ClientRepository;
 import ru.univ.grain.repositories.SubscriptionRepository;
+import ru.univ.grain.exception.BusinessException;
+import ru.univ.grain.exception.DuplicateResourceException;
+import ru.univ.grain.exception.ResourceNotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +28,16 @@ public class ClientService {
     private final ClientMapper clientMapper;
     private final SubscriptionMapper subscriptionMapper;
 
+    private static final String CLIENT_NOT_FOUND = "Клиент с id %d не найден";
+    private static final String CLIENT_EMAIL_NOT_FOUND = "Клиент с email %s не найден";
+    private static final String DUPLICATE_EMAIL = "Клиент с email %s уже существует";
+    private static final String SUBSCRIPTION_ALREADY_EXISTS = "Клиент уже имеет этот абонемент";
+    private static final String SUBSCRIPTION_NOT_OWNED = "У клиента нет абонемента с id %d";
+
     @Transactional
     public ClientResponseDto createClient(final ClientDto dto) {
         if (clientRepository.existsByEmail(dto.getEmail())) {
-            return null;
+            throw new DuplicateResourceException(String.format(DUPLICATE_EMAIL, dto.getEmail()));
         }
 
         final Client client = clientMapper.toEntity(dto);
@@ -38,15 +47,13 @@ public class ClientService {
 
     @Transactional
     public ClientResponseDto updateClient(final Long id, final ClientPatchDto dto) {
-        final Client client = clientRepository.findById(id).orElse(null);
-        if (client == null) {
-            return null;
-        }
+        final Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, id)));
 
         if (dto.getEmail() != null &&
                 !client.getEmail().equals(dto.getEmail()) &&
                 clientRepository.existsByEmail(dto.getEmail())) {
-            return null;
+            throw new DuplicateResourceException(String.format(DUPLICATE_EMAIL, dto.getEmail()));
         }
 
         clientMapper.updateEntity(dto, client);
@@ -57,10 +64,8 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientResponseDto getClientResponseById(final Long id) {
-        final Client client = clientRepository.findById(id).orElse(null);
-        if (client == null) {
-            return null;
-        }
+        final Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, id)));
         return clientMapper.toResponseDto(client);
     }
 
@@ -73,9 +78,10 @@ public class ClientService {
 
     @Transactional
     public void deleteClientById(final Long id) {
-        if (clientRepository.existsById(id)) {
-            clientRepository.deleteById(id);
-        }
+        final Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, id)));
+
+        clientRepository.delete(client);
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +95,7 @@ public class ClientService {
     public ClientResponseDto getClientByEmail(final String email) {
         final Client client = clientRepository.findByEmail(email);
         if (client == null) {
-            return null;
+            throw new ResourceNotFoundException(String.format(CLIENT_EMAIL_NOT_FOUND, email));
         }
         return clientMapper.toResponseDto(client);
     }
@@ -122,16 +128,16 @@ public class ClientService {
 
     @Transactional
     public ClientResponseDto addSubscriptionToClient(final Long clientId, final Long subscriptionId) {
-        final Client client = clientRepository.findById(clientId).orElse(null);
-        final Subscription subscription = subscriptionRepository
-                .findById(subscriptionId).orElse(null);
+        final Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, clientId)));
 
-        if (client == null || subscription == null) {
-            return null;
-        }
+        final Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Абонемент с id " + subscriptionId + " не найден"));
 
         if (!client.getSubscriptions().contains(subscription)) {
             client.getSubscriptions().add(subscription);
+        } else {
+            throw new BusinessException(SUBSCRIPTION_ALREADY_EXISTS);
         }
 
         final Client updatedClient = clientRepository.save(client);
@@ -140,12 +146,14 @@ public class ClientService {
 
     @Transactional
     public ClientResponseDto removeSubscriptionFromClient(final Long clientId, final Long subscriptionId) {
-        final Client client = clientRepository.findById(clientId).orElse(null);
-        if (client == null) {
-            return null;
-        }
+        final Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, clientId)));
 
-        client.getSubscriptions().removeIf(sub -> sub.getId().equals(subscriptionId));
+        final boolean removed = client.getSubscriptions().removeIf(sub -> sub.getId().equals(subscriptionId));
+
+        if (!removed) {
+            throw new ResourceNotFoundException("У клиента нет абонемента с id " + subscriptionId);
+        }
 
         final Client updatedClient = clientRepository.save(client);
         return clientMapper.toResponseDto(updatedClient);
@@ -155,11 +163,11 @@ public class ClientService {
     @Transactional
     public ClientResponseDto createClientWithNewSubscription(ClientDto clientDto, SubscriptionDto subscriptionDto) {
         if (clientRepository.existsByEmail(clientDto.getEmail())) {
-            return null;
+            throw new DuplicateResourceException(String.format(DUPLICATE_EMAIL, clientDto.getEmail()));
         }
 
         if (subscriptionRepository.findByName(subscriptionDto.getName()) != null) {
-            return null;
+            throw new DuplicateResourceException("Абонемент с названием '" + subscriptionDto.getName() + "' уже существует");
         }
 
         final Client client = clientMapper.toEntity(clientDto);
@@ -177,57 +185,4 @@ public class ClientService {
 
         return clientMapper.toResponseDto(savedClient);
     }
-
-    public ClientResponseDto createClientWithNewSubscriptionSequential(ClientDto clientDto, SubscriptionDto subscriptionDto) {
-
-        if (clientRepository.existsByEmail(clientDto.getEmail())) {
-            return null;
-        }
-
-
-        if (clientDto.getFirstName() == null || clientDto.getFirstName().isBlank() ||
-                clientDto.getLastName() == null || clientDto.getLastName().isBlank() ||
-                clientDto.getEmail() == null || clientDto.getEmail().isBlank() ||
-                clientDto.getPhoneNumber() == null || clientDto.getPhoneNumber().isBlank() ||
-                clientDto.getPassword() == null || clientDto.getPassword().isBlank()) {
-            return null;
-        }
-
-        final Client client = clientMapper.toEntity(clientDto);
-        if (client.getSubscriptions() == null) {
-            client.setSubscriptions(new ArrayList<>());
-        }
-        final Client savedClient = clientRepository.save(client);
-
-        if (subscriptionRepository.findByName(subscriptionDto.getName()) != null) {
-            return clientMapper.toResponseDto(savedClient);
-        }
-
-        if (subscriptionDto.getName() == null || subscriptionDto.getName().isBlank() ||
-                subscriptionDto.getPrice() == null ||
-                subscriptionDto.getSubscriptionType() == null ||
-                subscriptionDto.getDurationDays() == null) {
-            return clientMapper.toResponseDto(savedClient);
-        }
-
-        if (subscriptionDto.getSubscriptionType() == SubscriptionType.LIMITED &&
-                (subscriptionDto.getMaxVisits() == null || subscriptionDto.getMaxVisits() <= 0)) {
-            return clientMapper.toResponseDto(savedClient);
-        }
-
-        if (subscriptionDto.getSubscriptionType() == SubscriptionType.UNLIMITED &&
-                subscriptionDto.getMaxVisits() != null) {
-            return clientMapper.toResponseDto(savedClient);
-        }
-
-        final Subscription subscription = subscriptionMapper.toEntity(subscriptionDto);
-        final Subscription savedSubscription = subscriptionRepository.save(subscription);
-
-        savedClient.getSubscriptions().add(savedSubscription);
-        clientRepository.save(savedClient);
-
-        return clientMapper.toResponseDto(savedClient);
-    }
-
-
 }

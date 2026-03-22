@@ -21,136 +21,102 @@ public class VisitController {
 
     @GetMapping
     public ResponseEntity<List<VisitDto>> getAllVisits() {
-        final List<VisitDto> visits = visitService.getAllVisits();
-        return ResponseEntity.ok(visits);
+        return ResponseEntity.ok(visitService.getAllVisits());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VisitDto> getVisitById(@PathVariable final Long id) {
-        final VisitDto visit = visitService.getVisitById(id);
-        return visit != null ? ResponseEntity.ok(visit) : ResponseEntity.notFound().build();
+    public ResponseEntity<VisitDto> getVisitById(@PathVariable Long id) {
+        return ResponseEntity.ok(visitService.getVisitById(id));
     }
 
     @GetMapping("/client/{clientId}")
-    public ResponseEntity<List<VisitDto>> getClientVisits(@PathVariable final Long clientId) {
-        final List<VisitDto> visits = visitService.getClientVisits(clientId);
-        return ResponseEntity.ok(visits);
+    public ResponseEntity<List<VisitDto>> getClientVisits(@PathVariable Long clientId) {
+        return ResponseEntity.ok(visitService.getClientVisits(clientId));
     }
 
     @GetMapping("/client/{clientId}/upcoming")
-    public ResponseEntity<List<VisitDto>> getClientUpcomingVisits(@PathVariable final Long clientId) {
-        final List<VisitDto> visits = visitService.getClientUpcomingVisits(clientId);
-        return ResponseEntity.ok(visits);
+    public ResponseEntity<List<VisitDto>> getClientUpcomingVisits(@PathVariable Long clientId) {
+        return ResponseEntity.ok(visitService.getClientUpcomingVisits(clientId));
     }
 
     @GetMapping("/client/{clientId}/history")
     public ResponseEntity<List<VisitDto>> getClientHistory(
-            @PathVariable final Long clientId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
-        final List<VisitDto> visits = visitService.getClientHistory(clientId, from, to);
-        return ResponseEntity.ok(visits);
+            @PathVariable Long clientId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(visitService.getClientHistory(clientId, from, to));
     }
 
     @GetMapping("/client/{clientId}/count")
     public ResponseEntity<Long> getClientVisitsCount(
-            @PathVariable final Long clientId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
-        final long count = visitService.getClientVisitsCount(clientId, from, to);
-        return ResponseEntity.ok(count);
+            @PathVariable Long clientId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(visitService.getClientVisitsCount(clientId, from, to));
     }
 
     @GetMapping("/session/{sessionId}")
-    public ResponseEntity<List<VisitDto>> getScheduleVisits(@PathVariable final Long sessionId) {
-        final List<VisitDto> visits = visitService.getScheduleVisits(sessionId);
-        return ResponseEntity.ok(visits);
+    public ResponseEntity<List<VisitDto>> getScheduleVisits(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(visitService.getScheduleVisits(sessionId));
     }
 
     @GetMapping("/today")
     public ResponseEntity<List<VisitDto>> getTodayVisits() {
-        final List<VisitDto> visits = visitService.getTodayVisits();
-        return ResponseEntity.ok(visits);
+        return ResponseEntity.ok(visitService.getTodayVisits());
     }
 
     @GetMapping("/subscription/{subscriptionId}/used")
-    public ResponseEntity<Long> getSubscriptionUsedVisits(@PathVariable final Long subscriptionId) {
-        final long count = visitService.getSubscriptionUsedVisits(subscriptionId);
-        return ResponseEntity.ok(count);
+    public ResponseEntity<Long> getSubscriptionUsedVisits(@PathVariable Long subscriptionId) {
+        return ResponseEntity.ok(visitService.getSubscriptionUsedVisits(subscriptionId));
     }
 
     @GetMapping("/stats/hourly")
     public ResponseEntity<List<Object[]>> getVisitsByHourStats() {
-        final List<Object[]> stats = visitService.getVisitsByHourStats();
-        return ResponseEntity.ok(stats);
+        return ResponseEntity.ok(visitService.getVisitsByHourStats());
     }
 
     @PostMapping
-    public ResponseEntity<VisitDto> createVisit(@Valid @RequestBody final VisitDto dto) {
-        final VisitDto created = visitService.createVisit(dto);
-        return created != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(created)
-                : ResponseEntity.badRequest().build();
+    public ResponseEntity<VisitDto> createVisit(@Valid @RequestBody VisitDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(visitService.createVisit(dto));
     }
 
     @PostMapping("/book")
     public ResponseEntity<VisitDto> bookWorkout(
-            @RequestParam final Long clientId,
-            @RequestParam final Long sessionId,
-            @RequestParam final Long subscriptionId) {
-        final VisitDto booked = visitService.bookWorkout(clientId, sessionId, subscriptionId);
-        return booked != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(booked)
-                : ResponseEntity.badRequest().build();
+            @RequestParam Long clientId,
+            @RequestParam Long sessionId,
+            @RequestParam Long subscriptionId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(visitService.bookWorkout(clientId, sessionId, subscriptionId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<VisitDto> updateVisit(
-            @PathVariable final Long id,
-            @Valid @RequestBody final VisitDto dto) {
-
-        if (dto.getClientId() == null ||
-                dto.getWorkoutSessionId() == null ||
-                dto.getVisitTime() == null ||
-                dto.getStatus() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final VisitDto updated = visitService.updateVisit(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody VisitDto dto) {
+        return ResponseEntity.ok(visitService.updateVisit(id, dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<VisitDto> patchVisit(
-            @PathVariable final Long id,
-            @Valid @RequestBody final VisitDto dto) {
-
-
-        if (dto.getVisitTime() != null && dto.getVisitTime().isBefore(java.time.LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        final VisitDto updated = visitService.updateVisit(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody VisitDto dto) {
+        return ResponseEntity.ok(visitService.updateVisit(id, dto));
     }
 
     @PatchMapping("/{id}/attendance")
     public ResponseEntity<VisitDto> markAttendance(
-            @PathVariable final Long id,
-            @RequestParam final boolean attended) {
-        final VisitDto updated = visitService.markAttendance(id, attended);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @RequestParam boolean attended) {
+        return ResponseEntity.ok(visitService.markAttendance(id, attended));
     }
 
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<VisitDto> cancelBooking(@PathVariable final Long id) {
-        final VisitDto cancelled = visitService.cancelBooking(id);
-        return cancelled != null ? ResponseEntity.ok(cancelled) : ResponseEntity.notFound().build();
+    public ResponseEntity<VisitDto> cancelBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(visitService.cancelBooking(id));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVisit(@PathVariable final Long id) {
-        final boolean deleted = visitService.deleteVisit(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteVisit(@PathVariable Long id) {
+        visitService.deleteVisit(id);
+        return ResponseEntity.noContent().build();
     }
 }

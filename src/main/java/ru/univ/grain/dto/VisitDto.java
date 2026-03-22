@@ -12,15 +12,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class VisitDto {
-    @NotNull
+
+    @NotNull(message = "ID клиента обязателен")
     private Long clientId;
 
-    @NotNull
+    @NotNull(message = "ID тренировки обязателен")
     private Long workoutSessionId;
 
     private Long subscriptionId;
 
-    @FutureOrPresent
+    @FutureOrPresent(message = "Время визита не может быть в прошлом")
     private LocalDateTime visitTime;
 
     private VisitStatus status = VisitStatus.BOOKED;

@@ -21,151 +21,98 @@ public class SubscriptionController {
 
     @GetMapping
     public ResponseEntity<List<SubscriptionDto>> getAllSubscriptions() {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getAllSubscriptions();
-        return ResponseEntity.ok(subscriptions);
+        return ResponseEntity.ok(subscriptionService.getAllSubscriptions());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable final Long id) {
-        final SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
-        return subscription != null ? ResponseEntity.ok(subscription) : ResponseEntity.notFound().build();
+    public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable Long id) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionById(id));
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByType(@PathVariable final SubscriptionType type) {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getSubscriptionsByType(type);
-        return ResponseEntity.ok(subscriptions);
+    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByType(@PathVariable SubscriptionType type) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByType(type));
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByStatus(@PathVariable final SubscriptionStatus status) {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getSubscriptionsByStatus(status);
-        return ResponseEntity.ok(subscriptions);
+    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByStatus(@PathVariable SubscriptionStatus status) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByStatus(status));
     }
 
     @GetMapping("/workout-type/{workoutTypeId}")
-    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByWorkoutType(@PathVariable final Long workoutTypeId) {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getSubscriptionsByWorkoutType(workoutTypeId);
-        return ResponseEntity.ok(subscriptions);
+    public ResponseEntity<List<SubscriptionDto>> getSubscriptionsByWorkoutType(@PathVariable Long workoutTypeId) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByWorkoutType(workoutTypeId));
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<SubscriptionDto>> getActiveSubscriptions() {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getActiveSubscriptions();
-        return ResponseEntity.ok(subscriptions);
+        return ResponseEntity.ok(subscriptionService.getActiveSubscriptions());
     }
 
     @GetMapping("/expired")
     public ResponseEntity<List<SubscriptionDto>> getExpiredSubscriptions() {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getExpiredSubscriptions();
-        return ResponseEntity.ok(subscriptions);
+        return ResponseEntity.ok(subscriptionService.getExpiredSubscriptions());
     }
 
     @GetMapping("/cancelled")
     public ResponseEntity<List<SubscriptionDto>> getCancelledSubscriptions() {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getCancelledSubscriptions();
-        return ResponseEntity.ok(subscriptions);
+        return ResponseEntity.ok(subscriptionService.getCancelledSubscriptions());
     }
 
     @GetMapping("/used")
     public ResponseEntity<List<SubscriptionDto>> getUsedSubscriptions() {
-        final List<SubscriptionDto> subscriptions = subscriptionService.getUsedSubscriptions();
-        return ResponseEntity.ok(subscriptions);
+        return ResponseEntity.ok(subscriptionService.getUsedSubscriptions());
     }
 
     @PostMapping
-    public ResponseEntity<SubscriptionDto> createSubscription(@Valid @RequestBody final SubscriptionDto dto) {
-        final SubscriptionDto created = subscriptionService.createSubscription(dto);
-        return created != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(created)
-                : ResponseEntity.status(HttpStatus.CONFLICT).build();
+    public ResponseEntity<SubscriptionDto> createSubscription(@Valid @RequestBody SubscriptionDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(subscriptionService.createSubscription(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<SubscriptionDto> updateSubscription(
-            @PathVariable final Long id,
-            @Valid @RequestBody final SubscriptionDto dto) {
-
-        if (dto.getName() == null || dto.getName().isBlank() ||
-                dto.getPrice() == null ||
-                dto.getSubscriptionType() == null ||
-                dto.getDurationDays() == null ||
-                dto.getStatus() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        if (dto.getSubscriptionType() == SubscriptionType.LIMITED &&
-                (dto.getMaxVisits() == null || dto.getMaxVisits() <= 0)) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        if (dto.getSubscriptionType() == SubscriptionType.UNLIMITED &&
-                dto.getMaxVisits() != null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final SubscriptionDto updated = subscriptionService.updateSubscription(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody SubscriptionDto dto) {
+        return ResponseEntity.ok(subscriptionService.updateSubscription(id, dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<SubscriptionDto> patchSubscription(
-            @PathVariable final Long id,
-            @Valid @RequestBody final SubscriptionDto dto) {
-
-        if (dto.getSubscriptionType() != null && dto.getMaxVisits() != null &&
-                dto.getSubscriptionType() == SubscriptionType.LIMITED &&
-                dto.getMaxVisits() <= 0) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final SubscriptionDto updated = subscriptionService.updateSubscription(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody SubscriptionDto dto) {
+        return ResponseEntity.ok(subscriptionService.updateSubscription(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSubscription(@PathVariable final Long id) {
-        final boolean deleted = subscriptionService.deleteSubscription(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteSubscription(@PathVariable Long id) {
+        subscriptionService.deleteSubscription(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/expire")
-    public ResponseEntity<SubscriptionDto> expireSubscription(@PathVariable final Long id) {
-        final boolean expired = subscriptionService.expireSubscription(id);
-        if (!expired) {
-            return ResponseEntity.notFound().build();
-        }
-        final SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
-        return ResponseEntity.ok(subscription);
+    public ResponseEntity<SubscriptionDto> expireSubscription(@PathVariable Long id) {
+        subscriptionService.expireSubscription(id);
+        return ResponseEntity.ok(subscriptionService.getSubscriptionById(id));
     }
 
     @PostMapping("/{subscriptionId}/workout-types/{workoutTypeId}")
     public ResponseEntity<SubscriptionDto> addWorkoutType(
-            @PathVariable final Long subscriptionId,
-            @PathVariable final Long workoutTypeId) {
-        final boolean added = subscriptionService.addWorkoutType(subscriptionId, workoutTypeId);
-        if (!added) {
-            return ResponseEntity.notFound().build();
-        }
-        final SubscriptionDto subscription = subscriptionService.getSubscriptionById(subscriptionId);
-        return ResponseEntity.ok(subscription);
+            @PathVariable Long subscriptionId,
+            @PathVariable Long workoutTypeId) {
+        subscriptionService.addWorkoutType(subscriptionId, workoutTypeId);
+        return ResponseEntity.ok(subscriptionService.getSubscriptionById(subscriptionId));
     }
 
     @DeleteMapping("/{subscriptionId}/workout-types/{workoutTypeId}")
     public ResponseEntity<SubscriptionDto> removeWorkoutType(
-            @PathVariable final Long subscriptionId,
-            @PathVariable final Long workoutTypeId) {
-        final boolean removed = subscriptionService.removeWorkoutType(subscriptionId, workoutTypeId);
-        if (!removed) {
-            return ResponseEntity.notFound().build();
-        }
-        final SubscriptionDto subscription = subscriptionService.getSubscriptionById(subscriptionId);
-        return ResponseEntity.ok(subscription);
+            @PathVariable Long subscriptionId,
+            @PathVariable Long workoutTypeId) {
+        subscriptionService.removeWorkoutType(subscriptionId, workoutTypeId);
+        return ResponseEntity.ok(subscriptionService.getSubscriptionById(subscriptionId));
     }
 
     @GetMapping("/exists/name/{name}")
-    public ResponseEntity<Boolean> existsByName(@PathVariable final String name) {
-        final boolean exists = subscriptionService.getSubscriptionByName(name) != null;
-        return ResponseEntity.ok(exists);
+    public ResponseEntity<Boolean> existsByName(@PathVariable String name) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionByName(name) != null);
     }
 }

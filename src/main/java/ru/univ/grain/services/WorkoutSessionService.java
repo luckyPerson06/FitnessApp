@@ -17,6 +17,7 @@ import ru.univ.grain.repositories.WorkoutSessionRepository;
 import ru.univ.grain.repositories.TrainerRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 import ru.univ.grain.repositories.VisitRepository;
+import ru.univ.grain.exception.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -34,11 +35,25 @@ public class WorkoutSessionService {
     private final VisitRepository visitRepository;
     private final WorkoutSessionMapper workoutSessionMapper;
     private final SessionCache sessionCache;
-    private  WorkoutSessionService self;
+
+    private WorkoutSessionService self;
 
     @PostConstruct
     public void init() {
         this.self = this;
+    }
+
+    private static final String SESSION_NOT_FOUND = "Тренировка с id %d не найдена";
+    private static final String TRAINER_NOT_FOUND = "Тренер с id %d не найден";
+    private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
+    private static final String SESSION_OVERLAP = "У тренера уже есть тренировка в это время";
+    private static final String FUTURE_VISITS_EXIST = "Невозможно удалить тренировку: есть будущие записи клиентов";
+    private static final String INVALID_TIME_RANGE = "Время начала должно быть раньше времени окончания";
+
+    private void validateTimeRange(LocalTime startTime, LocalTime endTime) {
+        if (startTime.isAfter(endTime)) {
+            throw new BusinessException(INVALID_TIME_RANGE);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -50,13 +65,16 @@ public class WorkoutSessionService {
 
     @Transactional(readOnly = true)
     public WorkoutSessionDto getSessionById(final Long id) {
-        return workoutSessionRepository.findById(id)
-                .map(workoutSessionMapper::toDto)
-                .orElse(null);
+        final WorkoutSession session = workoutSessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, id)));
+        return workoutSessionMapper.toDto(session);
     }
 
     @Transactional
     public WorkoutSessionDto createSession(final WorkoutSessionDto dto) {
+        validateTimeRange(dto.getStartTime(), dto.getEndTime());
+
         final List<WorkoutSession> overlapping = findOverlappingSessionsInternal(
                 dto.getTrainerId(),
                 dto.getDayOfWeek(),
@@ -65,15 +83,16 @@ public class WorkoutSessionService {
         );
 
         if (!overlapping.isEmpty()) {
-            return null;
+            throw new BusinessException(SESSION_OVERLAP);
         }
 
-        final Trainer trainer = trainerRepository.findById(dto.getTrainerId()).orElse(null);
-        final WorkoutType workoutType = workoutTypeRepository.findById(dto.getWorkoutTypeId()).orElse(null);
+        final Trainer trainer = trainerRepository.findById(dto.getTrainerId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, dto.getTrainerId())));
 
-        if (trainer == null || workoutType == null) {
-            return null;
-        }
+        final WorkoutType workoutType = workoutTypeRepository.findById(dto.getWorkoutTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, dto.getWorkoutTypeId())));
 
         final WorkoutSession session = workoutSessionMapper.toEntity(dto);
         session.setTrainer(trainer);
@@ -81,17 +100,18 @@ public class WorkoutSessionService {
 
         final WorkoutSession saved = workoutSessionRepository.save(session);
 
-        sessionCache.clearByTrainer(dto.getTrainerId());
+        sessionCache.clearByTrainerLastName(trainer.getLastName());
 
         return workoutSessionMapper.toDto(saved);
     }
 
     @Transactional
     public WorkoutSessionDto updateSession(final Long id, final WorkoutSessionDto dto) {
-        final WorkoutSession existing = workoutSessionRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return null;
-        }
+        validateTimeRange(dto.getStartTime(), dto.getEndTime());
+
+        final WorkoutSession existing = workoutSessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, id)));
 
         final List<WorkoutSession> overlapping = findOverlappingSessionsInternal(
                 dto.getTrainerId(),
@@ -103,15 +123,19 @@ public class WorkoutSessionService {
                 .toList();
 
         if (!overlapping.isEmpty()) {
-            return null;
+            throw new BusinessException(SESSION_OVERLAP);
         }
 
-        final Trainer trainer = trainerRepository.findById(dto.getTrainerId()).orElse(null);
-        final WorkoutType workoutType = workoutTypeRepository.findById(dto.getWorkoutTypeId()).orElse(null);
+        final Trainer trainer = trainerRepository.findById(dto.getTrainerId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, dto.getTrainerId())));
 
-        if (trainer == null || workoutType == null) {
-            return null;
-        }
+        final WorkoutType workoutType = workoutTypeRepository.findById(dto.getWorkoutTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, dto.getWorkoutTypeId())));
+
+        final String oldTrainerLastName = existing.getTrainer().getLastName();
+        final String newTrainerLastName = trainer.getLastName();
 
         workoutSessionMapper.updateEntity(dto, existing);
         existing.setTrainer(trainer);
@@ -119,17 +143,19 @@ public class WorkoutSessionService {
 
         final WorkoutSession updated = workoutSessionRepository.save(existing);
 
-        sessionCache.clearByTrainer(dto.getTrainerId());
+        sessionCache.clearByTrainerLastName(oldTrainerLastName);
+        if (!oldTrainerLastName.equals(newTrainerLastName)) {
+            sessionCache.clearByTrainerLastName(newTrainerLastName);
+        }
 
         return workoutSessionMapper.toDto(updated);
     }
 
     @Transactional
-    public boolean deleteSession(final Long id) {
-        final WorkoutSession session = workoutSessionRepository.findById(id).orElse(null);
-        if (session == null) {
-            return false;
-        }
+    public void deleteSession(final Long id) {
+        final WorkoutSession session = workoutSessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, id)));
 
         final LocalDateTime now = LocalDateTime.now();
         final List<Visit> futureVisits = visitRepository.findByWorkoutSessionId(id).stream()
@@ -137,15 +163,13 @@ public class WorkoutSessionService {
                 .toList();
 
         if (!futureVisits.isEmpty()) {
-            return false;
+            throw new BusinessException(FUTURE_VISITS_EXIST);
         }
 
-        final Long trainerId = session.getTrainer().getId();
-        workoutSessionRepository.deleteById(id);
+        final String trainerLastName = session.getTrainer().getLastName();
+        workoutSessionRepository.delete(session);
 
-        sessionCache.clearByTrainer(trainerId);
-
-        return true;
+        sessionCache.clearByTrainerLastName(trainerLastName);
     }
 
     @Transactional(readOnly = true)
@@ -209,15 +233,12 @@ public class WorkoutSessionService {
             final DayOfWeek dayOfWeek,
             final LocalTime start,
             final LocalTime end) {
+        validateTimeRange(start, end);
         return findOverlappingSessionsInternal(trainerId, dayOfWeek, start, end).isEmpty();
     }
 
-    private long getBookedCountInternal(final Long sessionId) {
-        final WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
-        if (session == null) {
-            return 0;
-        }
-
+    @Transactional(readOnly = true)
+    public long getBookedCount(final Long sessionId) {
         final LocalDateTime now = LocalDateTime.now();
         return visitRepository.findByWorkoutSessionId(sessionId).stream()
                 .filter(v -> v.getVisitTime().isAfter(now) && v.getStatus() == VisitStatus.BOOKED)
@@ -225,15 +246,12 @@ public class WorkoutSessionService {
     }
 
     @Transactional(readOnly = true)
-    public long getBookedCount(final Long sessionId) {
-        return getBookedCountInternal(sessionId);
-    }
-
-    @Transactional(readOnly = true)
     public boolean hasAvailableSpots(final Long sessionId) {
-        final long bookedCount = getBookedCountInternal(sessionId);
-        final WorkoutSession session = workoutSessionRepository.findById(sessionId).orElse(null);
-        return session != null && bookedCount < session.getMaxParticipants();
+        final long bookedCount = self.getBookedCount(sessionId);
+        final WorkoutSession session = workoutSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, sessionId)));
+        return bookedCount < session.getMaxParticipants();
     }
 
     @Transactional(readOnly = true)
@@ -259,10 +277,9 @@ public class WorkoutSessionService {
 
     @Transactional
     public WorkoutSessionDto updateSessionStatus(final Long id, final WorkoutSessionStatus status) {
-        final WorkoutSession session = workoutSessionRepository.findById(id).orElse(null);
-        if (session == null) {
-            return null;
-        }
+        final WorkoutSession session = workoutSessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SESSION_NOT_FOUND, id)));
 
         if (status == WorkoutSessionStatus.CANCELLED &&
                 session.getStatus() != WorkoutSessionStatus.COMPLETED) {
@@ -276,9 +293,7 @@ public class WorkoutSessionService {
         session.setStatus(status);
         final WorkoutSession updated = workoutSessionRepository.save(session);
 
-        if (session.getTrainer() != null) {
-            sessionCache.clearByTrainer(session.getTrainer().getId());
-        }
+        sessionCache.clearByTrainerLastName(session.getTrainer().getLastName());
 
         return workoutSessionMapper.toDto(updated);
     }
@@ -288,44 +303,57 @@ public class WorkoutSessionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSessionDto> getSessionsByTrainerAndDay(
-            Long trainerId, DayOfWeek dayOfWeek,
-            int page, int size) {
-
+    public Page<WorkoutSessionDto> getSessionsByTrainerLastNameAndDay(
+            String trainerLastName,
+            DayOfWeek dayOfWeek,
+            int page,
+            int size
+    ) {
         final Pageable pageable = createPageable(page, size, "startTime");
 
-        return workoutSessionRepository.findByTrainerAndDay(trainerId, dayOfWeek, pageable)
-                .map(workoutSessionMapper::toDto);
+        return workoutSessionRepository.findByTrainerLastNameAndDay(
+                trainerLastName,
+                dayOfWeek,
+                pageable
+        ).map(workoutSessionMapper::toDto);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSessionDto> getSessionsByTrainerAndDayCached(
-            Long trainerId, DayOfWeek dayOfWeek,
-            int page, int size) {
-
-        final SessionSearchKey key = new SessionSearchKey(trainerId, dayOfWeek, page, size, "startTime");
+    public Page<WorkoutSessionDto> getSessionsByTrainerLastNameAndDayCached(
+            String trainerLastName,
+            DayOfWeek dayOfWeek,
+            int page,
+            int size
+    ) {
+        final SessionSearchKey key = new SessionSearchKey(trainerLastName, dayOfWeek, page, size, "startTime");
 
         final Page<WorkoutSessionDto> cached = sessionCache.get(key);
         if (cached != null) {
             return cached;
         }
 
-       final Page<WorkoutSessionDto> result = self.getSessionsByTrainerAndDay(trainerId, dayOfWeek, page, size);
+        final Page<WorkoutSessionDto> result = self.getSessionsByTrainerLastNameAndDay(
+                trainerLastName, dayOfWeek, page, size
+        );
 
         sessionCache.put(key, result);
-
         return result;
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSessionDto> getSessionsByTrainerAndDayNative(
-            Long trainerId, DayOfWeek dayOfWeek,
-            int page, int size) {
-
+    public Page<WorkoutSessionDto> getSessionsByTrainerLastNameAndDayNative(
+            String trainerLastName,
+            DayOfWeek dayOfWeek,
+            int page,
+            int size
+    ) {
         final Pageable pageable = createPageable(page, size, "start_time");
         final String dayOfWeekStr = dayOfWeek.name();
 
-        return workoutSessionRepository.findByTrainerAndDayNative(trainerId, dayOfWeekStr, pageable)
-                .map(workoutSessionMapper::toDto);
+        return workoutSessionRepository.findByTrainerLastNameAndDayNative(
+                trainerLastName,
+                dayOfWeekStr,
+                pageable
+        ).map(workoutSessionMapper::toDto);
     }
 }

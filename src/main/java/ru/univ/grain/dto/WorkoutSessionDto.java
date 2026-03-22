@@ -23,13 +23,14 @@ public class WorkoutSessionDto {
     @NotNull
     private DayOfWeek dayOfWeek;
 
-    @NotNull
+    @NotNull(message = "Время начала обязательно")
     private LocalTime startTime;
 
-    @NotNull
+    @NotNull(message = "Время окончания обязательно")
     private LocalTime endTime;
 
-    @Min(1)
+    @NotNull(message = "Максимальное количество участников обязательно")
+    @Min(value = 1, message = "Максимальное количество участников должно быть не менее 1")
     private Integer maxParticipants;
 
     private WorkoutSessionStatus status;

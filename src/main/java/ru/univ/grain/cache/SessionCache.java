@@ -23,11 +23,12 @@ public class SessionCache {
         cache.remove(key);
     }
 
-    public void clearByTrainer(Long trainerId) {
-        cache.keySet().removeIf(key -> key.getTrainerId().equals(trainerId));
+    public void clearByTrainerLastName(String trainerLastName) {
+        cache.keySet().removeIf(key -> key.getTrainerLastName().equals(trainerLastName));
     }
 
-    public void clearAll() {
-        cache.clear();
+    public int size() {
+        return cache.size();
     }
+
 }

@@ -25,15 +25,13 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClientResponseDto> getClientById(@PathVariable final Long id) {
-        final ClientResponseDto client = clientService.getClientResponseById(id);
-        return client != null ? ResponseEntity.ok(client) : ResponseEntity.notFound().build();
+    public ResponseEntity<ClientResponseDto> getClientById(@PathVariable Long id) {
+        return ResponseEntity.ok(clientService.getClientResponseById(id));
     }
 
     @GetMapping("/email/{email}")
     public ResponseEntity<ClientResponseDto> getClientByEmail(@PathVariable final String email) {
-        final ClientResponseDto client = clientService.getClientByEmail(email);
-        return client != null ? ResponseEntity.ok(client) : ResponseEntity.notFound().build();
+        return  ResponseEntity.ok(clientService.getClientByEmail(email));
     }
 
     @GetMapping("/lastname/{lastName}")
@@ -61,36 +59,22 @@ public class ClientController {
     }
 
     @PostMapping
-    public ResponseEntity<ClientResponseDto> createClient(@Valid @RequestBody final ClientDto dto) {
-        final ClientResponseDto created = clientService.createClient(dto);
-        return created != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(created)
-                : ResponseEntity.status(HttpStatus.CONFLICT).build();
+    public ResponseEntity<ClientResponseDto> createClient(@Valid @RequestBody ClientDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(clientService.createClient(dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<ClientResponseDto> patchClient(
-            @PathVariable final Long id,
-            @Valid @RequestBody final ClientPatchDto dto) {
-        final ClientResponseDto updated = clientService.updateClient(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody ClientPatchDto dto) {
+        return ResponseEntity.ok(clientService.updateClient(id, dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ClientResponseDto> updateClient(
-            @PathVariable final Long id,
-            @Valid @RequestBody final ClientPatchDto dto) {
-
-        if (dto.getFirstName() == null || dto.getFirstName().isBlank() ||
-                dto.getLastName() == null || dto.getLastName().isBlank() ||
-                dto.getEmail() == null || dto.getEmail().isBlank() ||
-                dto.getPhoneNumber() == null || dto.getPhoneNumber().isBlank() ||
-                dto.getStatus() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final ClientResponseDto updated = clientService.updateClient(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody ClientPatchDto dto) {
+        return ResponseEntity.ok(clientService.updateClient(id, dto));
     }
 
     @DeleteMapping("/{id}")
@@ -101,18 +85,16 @@ public class ClientController {
 
     @PostMapping("/{clientId}/subscriptions/{subscriptionId}")
     public ResponseEntity<ClientResponseDto> addSubscriptionToClient(
-            @PathVariable final Long clientId,
-            @PathVariable final Long subscriptionId) {
-        final ClientResponseDto updated = clientService.addSubscriptionToClient(clientId, subscriptionId);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long clientId,
+            @PathVariable Long subscriptionId) {
+        return ResponseEntity.ok(clientService.addSubscriptionToClient(clientId, subscriptionId));
     }
 
     @DeleteMapping("/{clientId}/subscriptions/{subscriptionId}")
     public ResponseEntity<ClientResponseDto> removeSubscriptionFromClient(
-            @PathVariable final Long clientId,
-            @PathVariable final Long subscriptionId) {
-        final ClientResponseDto updated = clientService.removeSubscriptionFromClient(clientId, subscriptionId);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long clientId,
+            @PathVariable Long subscriptionId) {
+        return ResponseEntity.ok(clientService.removeSubscriptionFromClient(clientId, subscriptionId));
     }
 
     @GetMapping("/exists/email/{email}")
@@ -130,30 +112,8 @@ public class ClientController {
                 request.getSubscription()
         );
 
-        if (created == null) {
-            if (clientService.existsByEmail(request.getClient().getEmail())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PostMapping("/with-new-subscription/sequential")
-    public ResponseEntity<ClientResponseDto> createClientWithNewSubscriptionSequential(
-            @Valid @RequestBody ClientWithSubscriptionRequest request) {
-
-        final ClientResponseDto result = clientService.createClientWithNewSubscriptionSequential(
-                request.getClient(),
-                request.getSubscription()
-        );
-
-        if (result == null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
-    }
 
 }

@@ -10,10 +10,11 @@ import ru.univ.grain.entities.TrainerStatus;
 @AllArgsConstructor
 @Builder
 public class TrainerDto {
-    @NotBlank
+
+    @NotBlank(message = "Имя тренера обязательно")
     private String firstName;
 
-    @NotBlank
+    @NotBlank(message = "Фамилия тренера обязательна")
     private String lastName;
 
     private String photoPath;

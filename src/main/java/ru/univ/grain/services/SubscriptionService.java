@@ -1,5 +1,6 @@
 package ru.univ.grain.services;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import ru.univ.grain.repositories.VisitRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 import ru.univ.grain.dto.SubscriptionDto;
 import ru.univ.grain.mapper.SubscriptionMapper;
+import ru.univ.grain.exception.*;
 
 import java.util.List;
 
@@ -21,6 +23,18 @@ public class SubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
     private final VisitRepository visitRepository;
 
+    private SubscriptionService self;
+
+    @PostConstruct
+    public void init() {
+        this.self = this;
+    }
+
+    private static final String SUBSCRIPTION_NOT_FOUND = "Абонемент с id %d не найден";
+    private static final String SUBSCRIPTION_NAME_EXISTS = "Абонемент с названием '%s' уже существует";
+    private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
+    private static final String INVALID_SUBSCRIPTION = "Некорректные параметры абонемента";
+
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getAllSubscriptions() {
         return subscriptionRepository.findAll().stream()
@@ -30,10 +44,9 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public SubscriptionDto getSubscriptionById(final Long id) {
-        final Subscription subscription = subscriptionRepository.findById(id).orElse(null);
-        if (subscription == null) {
-            return null;
-        }
+        final Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, id)));
         return subscriptionMapper.toDto(subscription);
     }
 
@@ -41,11 +54,12 @@ public class SubscriptionService {
     public SubscriptionDto createSubscription(final SubscriptionDto dto) {
         final Subscription existing = subscriptionRepository.findByName(dto.getName());
         if (existing != null) {
-            return null;
+            throw new DuplicateResourceException(
+                    String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
         }
 
         if (isInvalidSubscription(dto)) {
-            return null;
+            throw new BusinessException(INVALID_SUBSCRIPTION);
         }
 
         final Subscription subscription = subscriptionMapper.toEntity(dto);
@@ -55,20 +69,20 @@ public class SubscriptionService {
 
     @Transactional
     public SubscriptionDto updateSubscription(final Long id, final SubscriptionDto dto) {
-        final Subscription existing = subscriptionRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return null;
-        }
+        final Subscription existing = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, id)));
 
         if (!existing.getName().equals(dto.getName())) {
             final Subscription subscriptionWithSameName = subscriptionRepository.findByName(dto.getName());
             if (subscriptionWithSameName != null) {
-                return null;
+                throw new DuplicateResourceException(
+                        String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
             }
         }
 
         if (isInvalidSubscription(dto)) {
-            return null;
+            throw new BusinessException(INVALID_SUBSCRIPTION);
         }
 
         subscriptionMapper.updateEntity(dto, existing);
@@ -77,11 +91,10 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public boolean deleteSubscription(Long id) {
-        final Subscription subscription = subscriptionRepository.findById(id).orElse(null);
-        if (subscription == null) {
-            return false;
-        }
+    public void deleteSubscription(Long id) {
+        final Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, id)));
 
         final List<Visit> visits = visitRepository.findBySubscriptionId(id);
 
@@ -90,49 +103,49 @@ public class SubscriptionService {
         }
 
         subscriptionRepository.delete(subscription);
-        return true;
     }
 
     @Transactional
-    public boolean expireSubscription(final Long id) {
-        final Subscription subscription = subscriptionRepository.findById(id).orElse(null);
-        if (subscription == null) {
-            return false;
-        }
+    public void expireSubscription(final Long id) {
+        final Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, id)));
+
         subscription.setStatus(SubscriptionStatus.EXPIRED);
         subscriptionRepository.save(subscription);
-        return true;
     }
 
     @Transactional
-    public boolean addWorkoutType(final Long subscriptionId, final Long workoutTypeId) {
-        final Subscription subscription = subscriptionRepository.findById(subscriptionId).orElse(null);
-        final WorkoutType workoutType = workoutTypeRepository.findById(workoutTypeId).orElse(null);
+    public void addWorkoutType(final Long subscriptionId, final Long workoutTypeId) {
+        final Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, subscriptionId)));
 
-        if (subscription == null || workoutType == null) {
-            return false;
-        }
+        final WorkoutType workoutType = workoutTypeRepository.findById(workoutTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, workoutTypeId)));
 
         if (!subscription.getAllowedWorkoutTypes().contains(workoutType)) {
             subscription.getAllowedWorkoutTypes().add(workoutType);
             subscriptionRepository.save(subscription);
         }
-        return true;
     }
 
     @Transactional
-    public boolean removeWorkoutType(final Long subscriptionId, final Long workoutTypeId) {
-        final Subscription subscription = subscriptionRepository.findById(subscriptionId).orElse(null);
-        if (subscription == null) {
-            return false;
-        }
+    public void removeWorkoutType(final Long subscriptionId, final Long workoutTypeId) {
+        final Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(SUBSCRIPTION_NOT_FOUND, subscriptionId)));
 
         final boolean removed = subscription.getAllowedWorkoutTypes().removeIf(
                 wt -> wt.getId().equals(workoutTypeId));
-        if (removed) {
-            subscriptionRepository.save(subscription);
+
+        if (!removed) {
+            throw new ResourceNotFoundException(
+                    String.format(WORKOUT_TYPE_NOT_FOUND, workoutTypeId));
         }
-        return removed;
+
+        subscriptionRepository.save(subscription);
     }
 
     @Transactional(readOnly = true)
@@ -149,41 +162,40 @@ public class SubscriptionService {
                 .toList();
     }
 
-    private List<SubscriptionDto> getSubscriptionsByStatusInternal(final SubscriptionStatus status) {
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getSubscriptionsByStatus(final SubscriptionStatus status) {
         return subscriptionRepository.findByStatus(status).stream()
                 .map(subscriptionMapper::toDto)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SubscriptionDto> getSubscriptionsByStatus(final SubscriptionStatus status) {
-        return getSubscriptionsByStatusInternal(status);
-    }
-
-    @Transactional(readOnly = true)
     public List<SubscriptionDto> getActiveSubscriptions() {
-        return getSubscriptionsByStatusInternal(SubscriptionStatus.ACTIVE);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getExpiredSubscriptions() {
-        return getSubscriptionsByStatusInternal(SubscriptionStatus.EXPIRED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.EXPIRED);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getCancelledSubscriptions() {
-        return getSubscriptionsByStatusInternal(SubscriptionStatus.CANCELLED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.CANCELLED);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getUsedSubscriptions() {
-        return getSubscriptionsByStatusInternal(SubscriptionStatus.USED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.USED);
     }
 
     @Transactional(readOnly = true)
     public SubscriptionDto getSubscriptionByName(final String name) {
         final Subscription subscription = subscriptionRepository.findByName(name);
-        return subscription != null ? subscriptionMapper.toDto(subscription) : null;
+        if (subscription == null) {
+            throw new ResourceNotFoundException("Абонемент с названием '" + name + "' не найден");
+        }
+        return subscriptionMapper.toDto(subscription);
     }
 
     private boolean isInvalidSubscription(final SubscriptionDto dto) {

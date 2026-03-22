@@ -9,7 +9,7 @@ import java.time.DayOfWeek;
 @RequiredArgsConstructor
 @EqualsAndHashCode
 public class SessionSearchKey {
-    private final Long trainerId;
+    private final String trainerLastName;
     private final DayOfWeek dayOfWeek;
     private final int page;
     private final int size;

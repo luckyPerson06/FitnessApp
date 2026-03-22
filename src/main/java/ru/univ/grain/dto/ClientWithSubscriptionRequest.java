@@ -15,11 +15,11 @@ import lombok.Setter;
 @Builder
 public class ClientWithSubscriptionRequest {
 
-    @NotNull
+    @NotNull(message = "Данные клиента обязательны")
     @Valid
     private ClientDto client;
 
-    @NotNull
+    @NotNull(message = "Данные абонемента обязательны")
     @Valid
     private SubscriptionDto subscription;
 }

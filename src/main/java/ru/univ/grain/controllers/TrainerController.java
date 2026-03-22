@@ -27,13 +27,12 @@ public class TrainerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TrainerDto> getTrainerById(@PathVariable final Long id) {
-        final TrainerDto trainer = trainerService.getTrainerById(id);
-        return trainer != null ? ResponseEntity.ok(trainer) : ResponseEntity.notFound().build();
+    public ResponseEntity<TrainerDto> getTrainerById(@PathVariable Long id) {
+        return ResponseEntity.ok(trainerService.getTrainerById(id));
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<TrainerDto>> getTrainersByStatus(@PathVariable final TrainerStatus status) {
+    public ResponseEntity<List<TrainerDto>> getTrainersByStatus(@PathVariable TrainerStatus status) {
         return ResponseEntity.ok(trainerService.getTrainersByStatus(status));
     }
 
@@ -43,66 +42,54 @@ public class TrainerController {
     }
 
     @GetMapping("/specialization/{name}")
-    public ResponseEntity<List<TrainerDto>> getTrainersBySpecialization(@PathVariable final String name) {
+    public ResponseEntity<List<TrainerDto>> getTrainersBySpecialization(@PathVariable String name) {
         return ResponseEntity.ok(trainerService.getTrainersBySpecialization(name));
     }
 
     @GetMapping("/day/{dayOfWeek}")
-    public ResponseEntity<List<TrainerDto>> getTrainersWithSessionOnDay(@PathVariable final DayOfWeek dayOfWeek) {
+    public ResponseEntity<List<TrainerDto>> getTrainersWithSessionOnDay(@PathVariable DayOfWeek dayOfWeek) {
         return ResponseEntity.ok(trainerService.getTrainersWithSessionOnDay(dayOfWeek));
     }
 
     @PostMapping
-    public ResponseEntity<TrainerDto> createTrainer(@Valid @RequestBody final TrainerDto dto) {
-        final TrainerDto created = trainerService.createTrainer(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<TrainerDto> createTrainer(@Valid @RequestBody TrainerDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(trainerService.createTrainer(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<TrainerDto> updateTrainer(
-            @PathVariable final Long id,
-            @Valid @RequestBody final TrainerDto dto) {
-
-        if (dto.getFirstName() == null || dto.getFirstName().isBlank() ||
-                dto.getLastName() == null || dto.getLastName().isBlank() ||
-                dto.getStatus() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        final TrainerDto updated = trainerService.updateTrainer(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody TrainerDto dto) {
+        return ResponseEntity.ok(trainerService.updateTrainer(id, dto));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<TrainerDto> patchTrainer(
-            @PathVariable final Long id,
-            @Valid @RequestBody final TrainerDto dto) {
-
-        final TrainerDto updated = trainerService.updateTrainer(id, dto);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+            @PathVariable Long id,
+            @Valid @RequestBody TrainerDto dto) {
+        return ResponseEntity.ok(trainerService.updateTrainer(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTrainer(@PathVariable final Long id) {
-        return trainerService.deleteTrainer(id)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteTrainer(@PathVariable Long id) {
+        trainerService.deleteTrainer(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{trainerId}/specializations/{workoutTypeId}")
     public ResponseEntity<Void> addSpecialization(
-            @PathVariable final Long trainerId,
-            @PathVariable final Long workoutTypeId) {
+            @PathVariable Long trainerId,
+            @PathVariable Long workoutTypeId) {
         trainerService.addSpecialization(trainerId, workoutTypeId);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{trainerId}/specializations/{workoutTypeId}")
-    public ResponseEntity<Boolean> removeSpecialization(
-            @PathVariable final Long trainerId,
-            @PathVariable final Long workoutTypeId) {
-        final boolean removed = trainerService.removeSpecialization(trainerId, workoutTypeId);
-        return ResponseEntity.ok(removed);
+    public ResponseEntity<Void> removeSpecialization(
+            @PathVariable Long trainerId,
+            @PathVariable Long workoutTypeId) {
+        trainerService.removeSpecialization(trainerId, workoutTypeId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/demo/nplus1")
@@ -112,5 +99,4 @@ public class TrainerController {
         result.put("Решение (один запрос с JOIN)", trainerService.demonstrateSolution());
         return ResponseEntity.ok(result);
     }
-
 }

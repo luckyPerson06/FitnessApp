@@ -15,22 +15,23 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class SubscriptionDto {
-    @NotBlank
+
+    @NotBlank(message = "Название абонемента обязательно")
     private String name;
 
     private String description;
 
-    @NotNull
-    @Positive
+    @NotNull(message = "Цена абонемента обязательна")
+    @Positive(message = "Цена должна быть положительной")
     private BigDecimal price;
 
-    @NotNull
+    @NotNull(message = "Тип абонемента обязателен")
     private SubscriptionType subscriptionType;
 
-    @Min(1)
+    @Min(value = 1, message = "Количество посещений должно быть не менее 1")
     private Integer maxVisits;
 
-    @Min(1)
+    @Min(value = 1, message = "Срок действия должен быть не менее 1 дня")
     private Integer durationDays;
 
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;

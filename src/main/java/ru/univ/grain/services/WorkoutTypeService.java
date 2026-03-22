@@ -8,6 +8,7 @@ import ru.univ.grain.entities.WorkoutType;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 import ru.univ.grain.dto.WorkoutTypeDto;
 import ru.univ.grain.mapper.WorkoutTypeMapper;
+import ru.univ.grain.exception.*;
 
 import java.util.List;
 
@@ -18,6 +19,11 @@ public class WorkoutTypeService {
     private final WorkoutTypeRepository workoutTypeRepository;
     private final WorkoutTypeMapper workoutTypeMapper;
 
+
+    private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
+    private static final String WORKOUT_TYPE_NAME_EXISTS = "Тип тренировки с названием '%s' уже существует";
+    private static final String WORKOUT_TYPE_IN_USE = "Невозможно удалить тип тренировки: есть связанные тренеры, абонементы или тренировки";
+
     @Transactional(readOnly = true)
     public List<WorkoutTypeDto> getAllWorkoutTypes() {
         return workoutTypeRepository.findAll().stream()
@@ -27,16 +33,17 @@ public class WorkoutTypeService {
 
     @Transactional(readOnly = true)
     public WorkoutTypeDto getWorkoutTypeById(final Long id) {
-        return workoutTypeRepository.findById(id)
-                .map(workoutTypeMapper::toDto)
-                .orElse(null);
+        final WorkoutType workoutType = workoutTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, id)));
+        return workoutTypeMapper.toDto(workoutType);
     }
 
     @Transactional(readOnly = true)
     public WorkoutTypeDto getWorkoutTypeByName(final String name) {
         final WorkoutType workoutType = workoutTypeRepository.findByNameIgnoreCase(name);
         if (workoutType == null) {
-            return null;
+            throw new ResourceNotFoundException("Тип тренировки с названием '" + name + "' не найден");
         }
         return workoutTypeMapper.toDto(workoutType);
     }
@@ -45,7 +52,8 @@ public class WorkoutTypeService {
     public WorkoutTypeDto createWorkoutType(final WorkoutTypeDto dto) {
         final WorkoutType existing = workoutTypeRepository.findByNameIgnoreCase(dto.getName());
         if (existing != null) {
-            return null;
+            throw new DuplicateResourceException(
+                    String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
         }
 
         final WorkoutType workoutType = workoutTypeMapper.toEntity(dto);
@@ -55,15 +63,15 @@ public class WorkoutTypeService {
 
     @Transactional
     public WorkoutTypeDto updateWorkoutType(final Long id, final WorkoutTypeDto dto) {
-        final WorkoutType existing = workoutTypeRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return null;
-        }
+        final WorkoutType existing = workoutTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, id)));
 
         if (!existing.getName().equalsIgnoreCase(dto.getName())) {
             final WorkoutType workoutTypeWithSameName = workoutTypeRepository.findByNameIgnoreCase(dto.getName());
             if (workoutTypeWithSameName != null) {
-                return null;
+                throw new DuplicateResourceException(
+                        String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
             }
         }
 
@@ -73,15 +81,13 @@ public class WorkoutTypeService {
     }
 
     @Transactional
-    public boolean deactivateWorkoutType(final Long id) {
-        final WorkoutType workoutType = workoutTypeRepository.findById(id).orElse(null);
-        if (workoutType == null) {
-            return false;
-        }
+    public void deactivateWorkoutType(final Long id) {
+        final WorkoutType workoutType = workoutTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, id)));
 
         workoutType.setIsActive(false);
         workoutTypeRepository.save(workoutType);
-        return true;
     }
 
     @Transactional(readOnly = true)
@@ -118,22 +124,17 @@ public class WorkoutTypeService {
     }
 
     @Transactional
-    public boolean deleteWorkoutType(final Long id) {
-        if (!workoutTypeRepository.existsById(id)) {
-            return false;
+    public void deleteWorkoutType(final Long id) {
+        final WorkoutType workoutType = workoutTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, id)));
+
+        if (!workoutType.getTrainers().isEmpty() ||
+                !workoutType.getSubscriptions().isEmpty() ||
+                !workoutType.getWorkoutSessions().isEmpty()) {
+            throw new BusinessException(WORKOUT_TYPE_IN_USE);
         }
 
-
-        final WorkoutType workoutType = workoutTypeRepository.findById(id).orElse(null);
-        if (workoutType != null &&
-                (!workoutType.getTrainers().isEmpty() ||
-                        !workoutType.getSubscriptions().isEmpty() ||
-                        !workoutType.getWorkoutSessions().isEmpty())) {
-            return false;
-        }
-
-        workoutTypeRepository.deleteById(id);
-        return true;
+        workoutTypeRepository.delete(workoutType);
     }
-
 }

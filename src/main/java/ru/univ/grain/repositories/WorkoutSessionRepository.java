@@ -43,25 +43,26 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     @Query("SELECT s FROM WorkoutSession s WHERE s.status = 'SCHEDULED' ORDER BY s.dayOfWeek, s.startTime")
     List<WorkoutSession> findAllScheduled();
 
-
-    @Query("SELECT ws FROM WorkoutSession ws "
-            + "WHERE ws.trainer.id = :trainerId "
-            + "AND ws.dayOfWeek = :dayOfWeek")
-    Page<WorkoutSession> findByTrainerAndDay(
-            @Param("trainerId") Long trainerId,
+    @Query("SELECT ws FROM WorkoutSession ws " +
+            "WHERE LOWER(ws.trainer.lastName) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
+            "AND ws.dayOfWeek = :dayOfWeek")
+    Page<WorkoutSession> findByTrainerLastNameAndDay(
+            @Param("trainerLastName") String trainerLastName,
             @Param("dayOfWeek") DayOfWeek dayOfWeek,
             Pageable pageable
     );
 
-    @Query(value = "SELECT * FROM workout_sessions ws " +
-            "WHERE ws.trainer_id = :trainerId " +
+    @Query(value = "SELECT ws.* FROM workout_sessions ws " +
+            "JOIN trainers t ON ws.trainer_id = t.id " +
+            "WHERE LOWER(t.last_name) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
             "AND ws.day_of_week = :dayOfWeek",
             countQuery = "SELECT COUNT(*) FROM workout_sessions ws " +
-                    "WHERE ws.trainer_id = :trainerId " +
+                    "JOIN trainers t ON ws.trainer_id = t.id " +
+                    "WHERE LOWER(t.last_name) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
                     "AND ws.day_of_week = :dayOfWeek",
             nativeQuery = true)
-    Page<WorkoutSession> findByTrainerAndDayNative(
-            @Param("trainerId") Long trainerId,
+    Page<WorkoutSession> findByTrainerLastNameAndDayNative(
+            @Param("trainerLastName") String trainerLastName,
             @Param("dayOfWeek") String dayOfWeek,
             Pageable pageable
     );

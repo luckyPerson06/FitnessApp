@@ -10,6 +10,7 @@ import ru.univ.grain.repositories.TrainerRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 import ru.univ.grain.dto.TrainerDto;
 import ru.univ.grain.mapper.TrainerMapper;
+import ru.univ.grain.exception.*;
 
 import java.time.DayOfWeek;
 import java.util.List;
@@ -22,6 +23,11 @@ public class TrainerService {
     private final WorkoutTypeRepository workoutTypeRepository;
     private final TrainerMapper trainerMapper;
 
+
+    private static final String TRAINER_NOT_FOUND = "Тренер с id %d не найден";
+    private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
+    private static final String SPECIALIZATION_NOT_FOUND = "У тренера нет такой специализации";
+
     @Transactional(readOnly = true)
     public List<TrainerDto> getAllTrainers() {
         return trainerRepository.findAll().stream()
@@ -31,10 +37,9 @@ public class TrainerService {
 
     @Transactional(readOnly = true)
     public TrainerDto getTrainerById(final Long id) {
-        final Trainer trainer = trainerRepository.findById(id).orElse(null);
-        if (trainer == null) {
-            return null;
-        }
+        final Trainer trainer = trainerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, id)));
         return trainerMapper.toDto(trainer);
     }
 
@@ -47,10 +52,9 @@ public class TrainerService {
 
     @Transactional
     public TrainerDto updateTrainer(final Long id, final TrainerDto dto) {
-        final Trainer existing = trainerRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return null;
-        }
+        final Trainer existing = trainerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, id)));
 
         trainerMapper.updateEntity(dto, existing);
         final Trainer updated = trainerRepository.save(existing);
@@ -58,22 +62,22 @@ public class TrainerService {
     }
 
     @Transactional
-    public boolean deleteTrainer(final Long id) {
-        if (!trainerRepository.existsById(id)) {
-            return false;
-        }
-        trainerRepository.deleteById(id);
-        return true;
+    public void deleteTrainer(final Long id) {
+        final Trainer trainer = trainerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, id)));
+        trainerRepository.delete(trainer);
     }
 
     @Transactional
     public void addSpecialization(final Long trainerId, final Long workoutTypeId) {
-        final Trainer trainer = trainerRepository.findById(trainerId).orElse(null);
-        final WorkoutType workoutType = workoutTypeRepository.findById(workoutTypeId).orElse(null);
+        final Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, trainerId)));
 
-        if (trainer == null || workoutType == null) {
-            return;
-        }
+        final WorkoutType workoutType = workoutTypeRepository.findById(workoutTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, workoutTypeId)));
 
         if (!trainer.getSpecializations().contains(workoutType)) {
             trainer.getSpecializations().add(workoutType);
@@ -82,18 +86,19 @@ public class TrainerService {
     }
 
     @Transactional
-    public boolean removeSpecialization(final Long trainerId, final Long workoutTypeId) {
-        final Trainer trainer = trainerRepository.findById(trainerId).orElse(null);
-        if (trainer == null) {
-            return false;
-        }
+    public void removeSpecialization(final Long trainerId, final Long workoutTypeId) {
+        final Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, trainerId)));
 
         final boolean removed = trainer.getSpecializations().removeIf(
                 wt -> wt.getId().equals(workoutTypeId));
-        if (removed) {
-            trainerRepository.save(trainer);
+
+        if (!removed) {
+            throw new ResourceNotFoundException(SPECIALIZATION_NOT_FOUND);
         }
-        return removed;
+
+        trainerRepository.save(trainer);
     }
 
     @Transactional(readOnly = true)
@@ -124,7 +129,6 @@ public class TrainerService {
                 .toList();
     }
 
-
     private int[] calculateStats(List<Trainer> trainers) {
         int totalSpecializations = 0;
         int totalSessions = 0;
@@ -146,6 +150,4 @@ public class TrainerService {
     public int[] demonstrateSolution() {
         return calculateStats(trainerRepository.findAllWithDetails());
     }
-
-
 }
