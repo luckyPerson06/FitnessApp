@@ -8,13 +8,14 @@ import ru.univ.grain.entities.Client;
 import ru.univ.grain.entities.ClientStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface    ClientRepository extends JpaRepository<Client, Long> {
 
     List<Client> findByLastNameIgnoreCase(String lastName);
 
-    Client findByEmail(String lastName);
+    Optional<Client> findByEmail(String lastName);
 
     List<Client> findByStatus(ClientStatus status);
 

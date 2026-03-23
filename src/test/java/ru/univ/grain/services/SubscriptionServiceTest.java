@@ -1,0 +1,404 @@
+package ru.univ.grain.services;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import ru.univ.grain.dto.SubscriptionDto;
+import ru.univ.grain.entities.*;
+import ru.univ.grain.exception.BusinessException;
+import ru.univ.grain.exception.DuplicateResourceException;
+import ru.univ.grain.exception.ResourceNotFoundException;
+import ru.univ.grain.mapper.SubscriptionMapper;
+import ru.univ.grain.repositories.SubscriptionRepository;
+import ru.univ.grain.repositories.VisitRepository;
+import ru.univ.grain.repositories.WorkoutTypeRepository;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SubscriptionServiceTest {
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private WorkoutTypeRepository workoutTypeRepository;
+
+    @Mock
+    private VisitRepository visitRepository;
+
+    @Mock
+    private SubscriptionMapper subscriptionMapper;
+
+    @InjectMocks
+    private SubscriptionService subscriptionService;
+
+    @BeforeEach
+    void setUp() {
+        subscriptionService.init();
+    }
+
+    @Test
+    void createSubscription_ShouldReturnSubscription_WhenValid() {
+        SubscriptionDto dto = SubscriptionDto.builder()
+                .name("Премиум")
+                .price(BigDecimal.valueOf(5000))
+                .subscriptionType(SubscriptionType.UNLIMITED)
+                .durationDays(30)
+                .build();
+
+        Subscription subscription = Subscription.builder()
+                .id(1L)
+                .name(dto.getName())
+                .build();
+
+        SubscriptionDto responseDto = SubscriptionDto.builder()
+                .name(dto.getName())
+                .build();
+
+        when(subscriptionRepository.findByName(dto.getName())).thenReturn(Optional.empty());
+        when(subscriptionMapper.toEntity(dto)).thenReturn(subscription);
+        when(subscriptionRepository.save(any(Subscription.class))).thenReturn(subscription);
+        when(subscriptionMapper.toDto(subscription)).thenReturn(responseDto);
+
+        SubscriptionDto result = subscriptionService.createSubscription(dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(dto.getName());
+        verify(subscriptionRepository).save(any(Subscription.class));
+    }
+
+    @Test
+    void createSubscription_ShouldThrowException_WhenNameExists() {
+        SubscriptionDto dto = SubscriptionDto.builder()
+                .name("Базовый")
+                .build();
+
+        Subscription existing = Subscription.builder()
+                .name("Базовый")
+                .build();
+
+        when(subscriptionRepository.findByName(dto.getName())).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> subscriptionService.createSubscription(dto))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("уже существует");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void createSubscription_ShouldThrowException_WhenInvalidForLimited() {
+        SubscriptionDto dto = SubscriptionDto.builder()
+                .name("Тест")
+                .price(BigDecimal.valueOf(3000))
+                .subscriptionType(SubscriptionType.LIMITED)
+                .maxVisits(null)
+                .durationDays(30)
+                .build();
+
+        when(subscriptionRepository.findByName(dto.getName())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.createSubscription(dto))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Некорректные параметры");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void getSubscriptionById_ShouldReturnSubscription_WhenExists() {
+        Long id = 1L;
+        Subscription subscription = Subscription.builder()
+                .id(id)
+                .name("Базовый")
+                .build();
+
+        SubscriptionDto responseDto = SubscriptionDto.builder()
+                .name("Базовый")
+                .build();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription));
+        when(subscriptionMapper.toDto(subscription)).thenReturn(responseDto);
+
+        SubscriptionDto result = subscriptionService.getSubscriptionById(id);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("Базовый");
+    }
+
+    @Test
+    void getSubscriptionById_ShouldThrowException_WhenNotFound() {
+        Long id = 999L;
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.getSubscriptionById(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+    @Test
+    void updateSubscription_ShouldUpdateSubscription_WhenValid() {
+        Long id = 1L;
+        SubscriptionDto dto = SubscriptionDto.builder()
+                .name("Новое название")
+                .price(BigDecimal.valueOf(6000))
+                .subscriptionType(SubscriptionType.UNLIMITED)
+                .durationDays(60)
+                .build();
+
+        Subscription existing = Subscription.builder()
+                .id(id)
+                .name("Старое название")
+                .build();
+
+        Subscription updated = Subscription.builder()
+                .id(id)
+                .name(dto.getName())
+                .build();
+
+        SubscriptionDto responseDto = SubscriptionDto.builder()
+                .name(dto.getName())
+                .build();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(subscriptionRepository.findByName(dto.getName())).thenReturn(Optional.empty());
+        when(subscriptionRepository.save(any(Subscription.class))).thenReturn(updated);
+        when(subscriptionMapper.toDto(updated)).thenReturn(responseDto);
+
+        SubscriptionDto result = subscriptionService.updateSubscription(id, dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(dto.getName());
+        verify(subscriptionMapper).updateEntity(dto, existing);
+    }
+
+    @Test
+    void updateSubscription_ShouldThrowException_WhenNameConflict() {
+        Long id = 1L;
+        SubscriptionDto dto = SubscriptionDto.builder()
+                .name("Занятое название")
+                .build();
+
+        Subscription existing = Subscription.builder()
+                .id(id)
+                .name("Старое название")
+                .build();
+
+        Subscription conflict = Subscription.builder()
+                .id(2L)
+                .name("Занятое название")
+                .build();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(subscriptionRepository.findByName(dto.getName())).thenReturn(Optional.of(conflict));
+
+        assertThatThrownBy(() -> subscriptionService.updateSubscription(id, dto))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("уже существует");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteSubscription_ShouldDeleteSubscription_WhenExists() {
+        Long id = 1L;
+        Subscription subscription = Subscription.builder()
+                .id(id)
+                .build();
+
+        List<Visit> visits = new ArrayList<>();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription));
+        when(visitRepository.findBySubscriptionId(id)).thenReturn(visits);
+
+        subscriptionService.deleteSubscription(id);
+
+        verify(visitRepository).findBySubscriptionId(id);
+        verify(subscriptionRepository).delete(subscription);
+    }
+
+    @Test
+    void deleteSubscription_ShouldThrowException_WhenNotFound() {
+        Long id = 999L;
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.deleteSubscription(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(subscriptionRepository, never()).delete(any());
+    }
+
+    @Test
+    void expireSubscription_ShouldChangeStatus_WhenExists() {
+        Long id = 1L;
+        Subscription subscription = Subscription.builder()
+                .id(id)
+                .status(SubscriptionStatus.ACTIVE)
+                .build();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription));
+
+        subscriptionService.expireSubscription(id);
+
+        assertThat(subscription.getStatus()).isEqualTo(SubscriptionStatus.EXPIRED);
+        verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void expireSubscription_ShouldThrowException_WhenNotFound() {
+        Long id = 999L;
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.expireSubscription(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void addWorkoutType_ShouldAdd_WhenValid() {
+        Long subscriptionId = 1L;
+        Long workoutTypeId = 1L;
+
+        Subscription subscription = Subscription.builder()
+                .id(subscriptionId)
+                .allowedWorkoutTypes(new ArrayList<>())
+                .build();
+
+        WorkoutType workoutType = WorkoutType.builder()
+                .id(workoutTypeId)
+                .build();
+
+        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.of(subscription));
+        when(workoutTypeRepository.findById(workoutTypeId)).thenReturn(Optional.of(workoutType));
+
+        subscriptionService.addWorkoutType(subscriptionId, workoutTypeId);
+
+        assertThat(subscription.getAllowedWorkoutTypes()).contains(workoutType);
+        verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void addWorkoutType_ShouldThrowException_WhenSubscriptionNotFound() {
+        Long subscriptionId = 999L;
+        Long workoutTypeId = 1L;
+
+        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.addWorkoutType(subscriptionId, workoutTypeId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void removeWorkoutType_ShouldRemove_WhenExists() {
+        Long subscriptionId = 1L;
+        Long workoutTypeId = 1L;
+
+        WorkoutType workoutType = WorkoutType.builder()
+                .id(workoutTypeId)
+                .build();
+
+        List<WorkoutType> allowed = new ArrayList<>();
+        allowed.add(workoutType);
+
+        Subscription subscription = Subscription.builder()
+                .id(subscriptionId)
+                .allowedWorkoutTypes(allowed)
+                .build();
+
+        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.of(subscription));
+
+        subscriptionService.removeWorkoutType(subscriptionId, workoutTypeId);
+
+        assertThat(subscription.getAllowedWorkoutTypes()).doesNotContain(workoutType);
+        verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void getActiveSubscriptions_ShouldReturnList() {
+        Subscription sub1 = Subscription.builder()
+                .status(SubscriptionStatus.ACTIVE)
+                .build();
+        Subscription sub2 = Subscription.builder()
+                .status(SubscriptionStatus.ACTIVE)
+                .build();
+
+        when(subscriptionRepository.findByStatus(SubscriptionStatus.ACTIVE)).thenReturn(List.of(sub1, sub2));
+        when(subscriptionMapper.toDto(sub1)).thenReturn(SubscriptionDto.builder().build());
+        when(subscriptionMapper.toDto(sub2)).thenReturn(SubscriptionDto.builder().build());
+
+        List<SubscriptionDto> result = subscriptionService.getActiveSubscriptions();
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void getSubscriptionsByType_ShouldReturnFilteredList() {
+        Subscription sub1 = Subscription.builder()
+                .subscriptionType(SubscriptionType.UNLIMITED)
+                .build();
+        Subscription sub2 = Subscription.builder()
+                .subscriptionType(SubscriptionType.UNLIMITED)
+                .build();
+
+        when(subscriptionRepository.findBySubscriptionType(SubscriptionType.UNLIMITED)).thenReturn(List.of(sub1, sub2));
+        when(subscriptionMapper.toDto(sub1)).thenReturn(SubscriptionDto.builder().build());
+        when(subscriptionMapper.toDto(sub2)).thenReturn(SubscriptionDto.builder().build());
+
+        List<SubscriptionDto> result = subscriptionService.getSubscriptionsByType(SubscriptionType.UNLIMITED);
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void getSubscriptionByName_ShouldReturnSubscription_WhenExists() {
+        String name = "Базовый";
+        Subscription subscription = Subscription.builder()
+                .id(1L)
+                .name(name)
+                .build();
+
+        SubscriptionDto responseDto = SubscriptionDto.builder()
+                .name(name)
+                .build();
+
+        when(subscriptionRepository.findByName(name)).thenReturn(Optional.of(subscription));
+        when(subscriptionMapper.toDto(subscription)).thenReturn(responseDto);
+
+        SubscriptionDto result = subscriptionService.getSubscriptionByName(name);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(name);
+    }
+
+    @Test
+    void getSubscriptionByName_ShouldThrowException_WhenNotFound() {
+        String name = "Несуществующий";
+
+        when(subscriptionRepository.findByName(name)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.getSubscriptionByName(name))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+}

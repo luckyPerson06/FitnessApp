@@ -93,11 +93,9 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientResponseDto getClientByEmail(final String email) {
-        final Client client = clientRepository.findByEmail(email);
-        if (client == null) {
-            throw new ResourceNotFoundException(String.format(CLIENT_EMAIL_NOT_FOUND, email));
-        }
-        return clientMapper.toResponseDto(client);
+        return clientRepository.findByEmail(email)
+                .map(clientMapper::toResponseDto)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_EMAIL_NOT_FOUND, email)));
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +124,6 @@ public class ClientService {
         return clientRepository.existsByEmail(email);
     }
 
-    @Transactional
     public ClientResponseDto addSubscriptionToClient(final Long clientId, final Long subscriptionId) {
         final Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, clientId)));
@@ -152,7 +149,7 @@ public class ClientService {
         final boolean removed = client.getSubscriptions().removeIf(sub -> sub.getId().equals(subscriptionId));
 
         if (!removed) {
-            throw new ResourceNotFoundException("У клиента нет абонемента с id " + subscriptionId);
+            throw new ResourceNotFoundException(String.format(SUBSCRIPTION_NOT_OWNED, subscriptionId));
         }
 
         final Client updatedClient = clientRepository.save(client);
@@ -166,9 +163,10 @@ public class ClientService {
             throw new DuplicateResourceException(String.format(DUPLICATE_EMAIL, clientDto.getEmail()));
         }
 
-        if (subscriptionRepository.findByName(subscriptionDto.getName()) != null) {
-            throw new DuplicateResourceException("Абонемент с названием '" + subscriptionDto.getName() + "' уже существует");
-        }
+        subscriptionRepository.findByName(subscriptionDto.getName())
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException("Абонемент с названием '" + subscriptionDto.getName() + "' уже существует");
+                });
 
         final Client client = clientMapper.toEntity(clientDto);
         if (client.getSubscriptions() == null) {

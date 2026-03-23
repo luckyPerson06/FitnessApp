@@ -9,6 +9,7 @@ import ru.univ.grain.entities.SubscriptionStatus;
 import ru.univ.grain.entities.SubscriptionType;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
@@ -20,5 +21,5 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("SELECT s FROM Subscription s JOIN s.allowedWorkoutTypes wt WHERE wt.id = :workoutTypeId")
     List<Subscription> findByAllowedWorkoutTypeId(@Param("workoutTypeId") Long workoutTypeId);
 
-    Subscription findByName(String name);
+    Optional<Subscription> findByName(String name);
 }

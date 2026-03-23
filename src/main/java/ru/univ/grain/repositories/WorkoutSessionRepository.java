@@ -67,4 +67,15 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             Pageable pageable
     );
 
+    @Query("SELECT ws FROM WorkoutSession ws " +
+            "WHERE ws.trainer.id = :trainerId " +
+            "AND ws.dayOfWeek = :dayOfWeek " +
+            "AND ((ws.startTime BETWEEN :start AND :end) OR (ws.endTime BETWEEN :start AND :end))")
+    List<WorkoutSession> findOverlappingSessionsForTrainer(
+            @Param("trainerId") Long trainerId,
+            @Param("dayOfWeek") DayOfWeek dayOfWeek,
+            @Param("start") LocalTime start,
+            @Param("end") LocalTime end
+    );
+
 }

@@ -25,10 +25,13 @@ public class SubscriptionService {
 
     private SubscriptionService self;
 
+
     @PostConstruct
     public void init() {
         this.self = this;
     }
+
+
 
     private static final String SUBSCRIPTION_NOT_FOUND = "Абонемент с id %d не найден";
     private static final String SUBSCRIPTION_NAME_EXISTS = "Абонемент с названием '%s' уже существует";
@@ -52,11 +55,11 @@ public class SubscriptionService {
 
     @Transactional
     public SubscriptionDto createSubscription(final SubscriptionDto dto) {
-        final Subscription existing = subscriptionRepository.findByName(dto.getName());
-        if (existing != null) {
-            throw new DuplicateResourceException(
-                    String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
-        }
+        subscriptionRepository.findByName(dto.getName())
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException(
+                            String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
+                });
 
         if (isInvalidSubscription(dto)) {
             throw new BusinessException(INVALID_SUBSCRIPTION);
@@ -74,11 +77,11 @@ public class SubscriptionService {
                         String.format(SUBSCRIPTION_NOT_FOUND, id)));
 
         if (!existing.getName().equals(dto.getName())) {
-            final Subscription subscriptionWithSameName = subscriptionRepository.findByName(dto.getName());
-            if (subscriptionWithSameName != null) {
-                throw new DuplicateResourceException(
-                        String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
-            }
+            subscriptionRepository.findByName(dto.getName())
+                    .ifPresent(subscriptionWithSameName -> {
+                        throw new DuplicateResourceException(
+                                String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
+                    });
         }
 
         if (isInvalidSubscription(dto)) {
@@ -191,11 +194,10 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public SubscriptionDto getSubscriptionByName(final String name) {
-        final Subscription subscription = subscriptionRepository.findByName(name);
-        if (subscription == null) {
-            throw new ResourceNotFoundException("Абонемент с названием '" + name + "' не найден");
-        }
-        return subscriptionMapper.toDto(subscription);
+        return subscriptionRepository.findByName(name)
+                .map(subscriptionMapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Абонемент с названием '" + name + "' не найден"));
     }
 
     private boolean isInvalidSubscription(final SubscriptionDto dto) {

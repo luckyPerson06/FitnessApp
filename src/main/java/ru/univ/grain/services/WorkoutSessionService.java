@@ -23,6 +23,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -356,4 +357,65 @@ public class WorkoutSessionService {
                 pageable
         ).map(workoutSessionMapper::toDto);
     }
+
+
+
+    @Transactional
+    public List<WorkoutSessionDto> createSessionsBulkWithTransaction(List<WorkoutSessionDto> dtos) {
+        return dtos.stream()
+                .map(this::validateAndCreateSession)
+                .toList();
+    }
+
+    public List<WorkoutSessionDto> createSessionsBulkWithoutTransaction(List<WorkoutSessionDto> dtos) {
+        final List<WorkoutSessionDto> created = new ArrayList<>();
+
+        for (WorkoutSessionDto dto : dtos) {
+            created.add(validateAndCreateSession(dto));
+        }
+
+        return created;
+    }
+
+    private WorkoutSessionDto validateAndCreateSession(WorkoutSessionDto dto) {
+
+        if (dto.getStartTime().isAfter(dto.getEndTime())) {
+            throw new BusinessException(INVALID_TIME_RANGE);
+        }
+
+        final List<WorkoutSession> overlapping = workoutSessionRepository
+                .findOverlappingSessionsForTrainer(
+                        dto.getTrainerId(),
+                        dto.getDayOfWeek(),
+                        dto.getStartTime(),
+                        dto.getEndTime()
+                );
+
+        if (!overlapping.isEmpty()) {
+            throw new BusinessException(
+                    String.format(SESSION_OVERLAP, dto.getTrainerId())
+            );
+        }
+
+        final Trainer trainer = trainerRepository.findById(dto.getTrainerId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(TRAINER_NOT_FOUND, dto.getTrainerId())));
+
+        final WorkoutType workoutType = workoutTypeRepository.findById(dto.getWorkoutTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(WORKOUT_TYPE_NOT_FOUND, dto.getWorkoutTypeId())));
+
+        final WorkoutSession session = workoutSessionMapper.toEntity(dto);
+        session.setTrainer(trainer);
+        session.setWorkoutType(workoutType);
+
+        final WorkoutSession saved = workoutSessionRepository.save(session);
+
+
+        sessionCache.clearByTrainerLastName(trainer.getLastName());
+
+        return workoutSessionMapper.toDto(saved);
+    }
+
+
 }

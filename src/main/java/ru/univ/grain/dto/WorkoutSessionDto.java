@@ -1,38 +1,50 @@
 package ru.univ.grain.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import ru.univ.grain.entities.*;
+
 import java.time.DayOfWeek;
 import java.time.LocalTime;
-
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Schema(description = "Запрос на создание/обновление тренировки")
 public class WorkoutSessionDto {
+
+    @Schema(description = "ID тренера", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private Long trainerId;
 
+    @Schema(description = "ID типа тренировки", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private Long workoutTypeId;
 
+    @Schema(description = "День недели", example = "MONDAY", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private DayOfWeek dayOfWeek;
 
+    @Schema(description = "Время начала", example = "10:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Время начала обязательно")
     private LocalTime startTime;
 
+    @Schema(description = "Время окончания", example = "11:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Время окончания обязательно")
     private LocalTime endTime;
 
+    @Schema(description = "Максимальное количество участников", example = "10", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Максимальное количество участников обязательно")
     @Min(value = 1, message = "Максимальное количество участников должно быть не менее 1")
     private Integer maxParticipants;
 
+    @Schema(description = "Статус тренировки", example = "SCHEDULED")
     private WorkoutSessionStatus status;
+
+    @Schema(description = "Цветовой код для календаря", example = "#FF5733")
     private String colorCode;
 }

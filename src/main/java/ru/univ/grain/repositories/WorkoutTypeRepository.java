@@ -8,11 +8,12 @@ import ru.univ.grain.entities.WorkoutCategory;
 import ru.univ.grain.entities.WorkoutType;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkoutTypeRepository extends JpaRepository<WorkoutType, Long> {
 
-    WorkoutType findByNameIgnoreCase(String name);
+    Optional<WorkoutType> findByNameIgnoreCase(String name);
 
     List<WorkoutType> findByIsActiveTrue();
 

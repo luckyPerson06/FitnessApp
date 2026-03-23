@@ -41,20 +41,19 @@ public class WorkoutTypeService {
 
     @Transactional(readOnly = true)
     public WorkoutTypeDto getWorkoutTypeByName(final String name) {
-        final WorkoutType workoutType = workoutTypeRepository.findByNameIgnoreCase(name);
-        if (workoutType == null) {
-            throw new ResourceNotFoundException("Тип тренировки с названием '" + name + "' не найден");
-        }
-        return workoutTypeMapper.toDto(workoutType);
+        return workoutTypeRepository.findByNameIgnoreCase(name)
+                .map(workoutTypeMapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Тип тренировки с названием '" + name + "' не найден"));
     }
 
     @Transactional
     public WorkoutTypeDto createWorkoutType(final WorkoutTypeDto dto) {
-        final WorkoutType existing = workoutTypeRepository.findByNameIgnoreCase(dto.getName());
-        if (existing != null) {
-            throw new DuplicateResourceException(
-                    String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
-        }
+        workoutTypeRepository.findByNameIgnoreCase(dto.getName())
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException(
+                            String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
+                });
 
         final WorkoutType workoutType = workoutTypeMapper.toEntity(dto);
         final WorkoutType saved = workoutTypeRepository.save(workoutType);
@@ -68,11 +67,11 @@ public class WorkoutTypeService {
                         String.format(WORKOUT_TYPE_NOT_FOUND, id)));
 
         if (!existing.getName().equalsIgnoreCase(dto.getName())) {
-            final WorkoutType workoutTypeWithSameName = workoutTypeRepository.findByNameIgnoreCase(dto.getName());
-            if (workoutTypeWithSameName != null) {
-                throw new DuplicateResourceException(
-                        String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
-            }
+            workoutTypeRepository.findByNameIgnoreCase(dto.getName())
+                    .ifPresent(workoutTypeWithSameName -> {
+                        throw new DuplicateResourceException(
+                                String.format(WORKOUT_TYPE_NAME_EXISTS, dto.getName()));
+                    });
         }
 
         workoutTypeMapper.updateEntity(dto, existing);
