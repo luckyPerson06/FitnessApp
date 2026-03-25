@@ -223,7 +223,6 @@ public class WorkoutSessionController {
 
     @Operation(summary = "Массовое создание тренировок (без транзакции)")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "207", description = "Частично созданы"),
             @ApiResponse(responseCode = "400", description = "Ошибка валидации", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/bulk/without-transaction")

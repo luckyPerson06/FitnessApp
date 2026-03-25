@@ -183,4 +183,7 @@ public class ClientService {
 
         return clientMapper.toResponseDto(savedClient);
     }
+
+
+
 }

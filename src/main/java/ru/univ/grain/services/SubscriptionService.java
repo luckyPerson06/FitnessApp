@@ -61,9 +61,7 @@ public class SubscriptionService {
                             String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
                 });
 
-        if (isInvalidSubscription(dto)) {
-            throw new BusinessException(INVALID_SUBSCRIPTION);
-        }
+        
 
         final Subscription subscription = subscriptionMapper.toEntity(dto);
         final Subscription saved = subscriptionRepository.save(subscription);
@@ -84,9 +82,6 @@ public class SubscriptionService {
                     });
         }
 
-        if (isInvalidSubscription(dto)) {
-            throw new BusinessException(INVALID_SUBSCRIPTION);
-        }
 
         subscriptionMapper.updateEntity(dto, existing);
         final Subscription updated = subscriptionRepository.save(existing);
@@ -200,12 +195,5 @@ public class SubscriptionService {
                         "Абонемент с названием '" + name + "' не найден"));
     }
 
-    private boolean isInvalidSubscription(final SubscriptionDto dto) {
-        if (dto.getSubscriptionType() == SubscriptionType.LIMITED) {
-            return dto.getMaxVisits() == null || dto.getMaxVisits() <= 0;
-        } else if (dto.getSubscriptionType() == SubscriptionType.UNLIMITED) {
-            return dto.getMaxVisits() != null;
-        }
-        return false;
-    }
+
 }

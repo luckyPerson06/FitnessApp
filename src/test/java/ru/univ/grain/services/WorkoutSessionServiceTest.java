@@ -756,4 +756,671 @@ class WorkoutSessionServiceTest {
 
         verify(workoutSessionRepository, times(1)).save(any(WorkoutSession.class));
     }
+
+
+
+    @Test
+    void hasAvailableSpots_ShouldThrowException_WhenSessionNotFound() {
+        Long sessionId = 999L;
+
+        when(workoutSessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.hasAvailableSpots(sessionId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найдена");
+    }
+
+    @Test
+    void getBookedCount_ShouldReturnZero_WhenNoBookedVisits() {
+        Long sessionId = 1L;
+
+        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(List.of());
+
+        long result = workoutSessionService.getBookedCount(sessionId);
+
+        assertThat(result).isZero();
+    }
+
+    @Test
+    void getBookedCount_ShouldIgnorePastVisits() {
+        Long sessionId = 1L;
+        Visit pastVisit = new Visit();
+        pastVisit.setVisitTime(LocalDateTime.now().minusDays(1));
+        pastVisit.setStatus(VisitStatus.BOOKED);
+        Visit futureVisit = new Visit();
+        futureVisit.setVisitTime(LocalDateTime.now().plusDays(1));
+        futureVisit.setStatus(VisitStatus.BOOKED);
+
+        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(List.of(pastVisit, futureVisit));
+
+        long result = workoutSessionService.getBookedCount(sessionId);
+
+        assertThat(result).isEqualTo(1);
+    }
+
+    @Test
+    void updateSessionStatus_ShouldNotCancelVisits_WhenStatusNotCancelled() {
+        Long id = 1L;
+        WorkoutSessionStatus newStatus = WorkoutSessionStatus.CONFIRMED;
+        WorkoutSession session = new WorkoutSession();
+        session.setId(id);
+        session.setStatus(WorkoutSessionStatus.SCHEDULED);
+        Trainer trainer = new Trainer();
+        trainer.setLastName("Смирнова");
+        session.setTrainer(trainer);
+
+        WorkoutSessionDto responseDto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(session));
+        when(workoutSessionRepository.save(any(WorkoutSession.class))).thenReturn(session);
+        when(workoutSessionMapper.toDto(any(WorkoutSession.class))).thenReturn(responseDto);
+
+        workoutSessionService.updateSessionStatus(id, newStatus);
+
+        verify(visitRepository, never()).findByWorkoutSessionId(any());
+    }
+
+    @Test
+    void updateSessionStatus_ShouldThrowException_WhenSessionNotFound() {
+        Long id = 999L;
+        WorkoutSessionStatus status = WorkoutSessionStatus.CONFIRMED;
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.updateSessionStatus(id, status))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найдена");
+    }
+
+    @Test
+    void createSessionsBulkWithTransaction_ShouldThrowException_WhenTimeRangeInvalid() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(12, 0))
+                .endTime(LocalTime.of(11, 0))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithTransaction(dtos))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Время начала должно быть раньше");
+    }
+
+    @Test
+    void getSessionsByTrainerLastNameAndDay_ShouldReturnEmptyPage() {
+        String lastName = "НесуществующаяФамилия";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        Page<WorkoutSession> emptyPage = new PageImpl<>(List.of());
+
+        when(workoutSessionRepository.findByTrainerLastNameAndDay(eq(lastName), eq(day), any()))
+                .thenReturn(emptyPage);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDay(lastName, day, page, size);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
+    void getSessionsByTrainerLastNameAndDayCached_ShouldCacheResult_WhenMiss() {
+        String lastName = "Смирнова";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        WorkoutSession session = new WorkoutSession();
+        Page<WorkoutSession> sessionPage = new PageImpl<>(List.of(session));
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        SessionSearchKey key = new SessionSearchKey(lastName, day, page, size, "startTime");
+
+        when(sessionCache.get(key)).thenReturn(null);
+        when(workoutSessionRepository.findByTrainerLastNameAndDay(eq(lastName), eq(day), any()))
+                .thenReturn(sessionPage);
+        when(workoutSessionMapper.toDto(any(WorkoutSession.class))).thenReturn(dto);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDayCached(lastName, day, page, size);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(sessionCache).put(key, result);
+    }
+
+    @Test
+    void getSessionsByTrainerLastNameAndDayNative_ShouldReturnEmptyPage() {
+        String lastName = "НесуществующаяФамилия";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        Page<WorkoutSession> emptyPage = new PageImpl<>(List.of());
+
+        when(workoutSessionRepository.findByTrainerLastNameAndDayNative(eq(lastName), eq("MONDAY"), any()))
+                .thenReturn(emptyPage);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDayNative(lastName, day, page, size);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).isEmpty();
+    }
+
+
+
+    @Test
+    void createSessionsBulkWithoutTransaction_ShouldThrowException_WhenTimeRangeInvalid() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(12, 0))
+                .endTime(LocalTime.of(11, 0))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithoutTransaction(dtos))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Время начала должно быть раньше");
+    }
+
+    @Test
+    void updateSession_ShouldClearCacheForBothTrainers_WhenTrainerChanged() {
+        Long id = 1L;
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(2L);
+        dto.setWorkoutTypeId(1L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+        dto.setStatus(WorkoutSessionStatus.SCHEDULED);
+
+        Trainer oldTrainer = new Trainer();
+        oldTrainer.setId(1L);
+        oldTrainer.setLastName("Смирнова");
+
+        Trainer newTrainer = new Trainer();
+        newTrainer.setId(2L);
+        newTrainer.setLastName("Иванова");
+
+        WorkoutType workoutType = new WorkoutType();
+        workoutType.setId(1L);
+
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(id);
+        existing.setTrainer(oldTrainer);
+
+        WorkoutSession updated = new WorkoutSession();
+        updated.setId(id);
+
+        WorkoutSessionDto responseDto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(2L)).thenReturn(Optional.of(newTrainer));
+        when(workoutTypeRepository.findById(1L)).thenReturn(Optional.of(workoutType));
+        when(workoutSessionRepository.save(any(WorkoutSession.class))).thenReturn(updated);
+        when(workoutSessionMapper.toDto(any(WorkoutSession.class))).thenReturn(responseDto);
+
+        workoutSessionService.updateSession(id, dto);
+
+        verify(sessionCache).clearByTrainerLastName("Смирнова");
+        verify(sessionCache).clearByTrainerLastName("Иванова");
+    }
+
+    @Test
+    void isTrainerAvailable_ShouldThrowException_WhenTimeRangeInvalid() {
+        Long trainerId = 1L;
+        DayOfWeek day = DayOfWeek.MONDAY;
+        LocalTime start = LocalTime.of(12, 0);
+        LocalTime end = LocalTime.of(11, 0);
+
+        assertThatThrownBy(() -> workoutSessionService.isTrainerAvailable(trainerId, day, start, end))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Время начала должно быть раньше");
+    }
+
+    @Test
+    void getSessionsByTrainer_ShouldReturnList_WhenSessionsExist() {
+        Long trainerId = 1L;
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByTrainerId(trainerId)).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainer(trainerId);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByDay_ShouldReturnList_WhenSessionsExist() {
+        DayOfWeek day = DayOfWeek.MONDAY;
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByDayOfWeek(day)).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByDay(day);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getActiveSessionsByDay_ShouldReturnList_WhenSessionsExist() {
+        DayOfWeek day = DayOfWeek.MONDAY;
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByDayOfWeekAndStatus(day, WorkoutSessionStatus.SCHEDULED))
+                .thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getActiveSessionsByDay(day);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByWorkoutType_ShouldReturnList_WhenSessionsExist() {
+        Long workoutTypeId = 1L;
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByWorkoutTypeId(workoutTypeId)).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByWorkoutType(workoutTypeId);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getTodaySessions_ShouldReturnList_WhenSessionsExist() {
+        DayOfWeek today = LocalDate.now().getDayOfWeek();
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByDayOfWeekAndStatus(today, WorkoutSessionStatus.SCHEDULED))
+                .thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getTodaySessions();
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void findOverlappingSessions_ShouldReturnList_WhenOverlapExists() {
+        Long trainerId = 1L;
+        DayOfWeek day = DayOfWeek.MONDAY;
+        LocalTime start = LocalTime.of(10, 0);
+        LocalTime end = LocalTime.of(11, 0);
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findOverlappingSessions(trainerId, day, start, end))
+                .thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.findOverlappingSessions(trainerId, day, start, end);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByStatus_ShouldReturnList_WhenSessionsExist() {
+        WorkoutSessionStatus status = WorkoutSessionStatus.SCHEDULED;
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByStatus(status)).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByStatus(status);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByTime_ShouldReturnList_WhenSessionsExist() {
+        DayOfWeek day = DayOfWeek.MONDAY;
+        LocalTime time = LocalTime.of(10, 0);
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByTime(day, time)).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByTime(day, time);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getAllScheduledSessions_ShouldReturnList_WhenSessionsExist() {
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findAllScheduled()).thenReturn(List.of(session));
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        List<WorkoutSessionDto> result = workoutSessionService.getAllScheduledSessions();
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByTrainerLastNameAndDay_ShouldReturnPage_WhenSessionsExist() {
+        String lastName = "Смирнова";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        WorkoutSession session = new WorkoutSession();
+        Page<WorkoutSession> sessionPage = new PageImpl<>(List.of(session));
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByTrainerLastNameAndDay(eq(lastName), eq(day), any()))
+                .thenReturn(sessionPage);
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDay(lastName, day, page, size);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void getSessionsByTrainerLastNameAndDayNative_ShouldReturnPage_WhenSessionsExist() {
+        String lastName = "Смирнова";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        WorkoutSession session = new WorkoutSession();
+        Page<WorkoutSession> sessionPage = new PageImpl<>(List.of(session));
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findByTrainerLastNameAndDayNative(eq(lastName), eq("MONDAY"), any()))
+                .thenReturn(sessionPage);
+        when(workoutSessionMapper.toDto(session)).thenReturn(dto);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDayNative(lastName, day, page, size);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void createSessionsBulkWithoutTransaction_ShouldReturnCreatedList_WhenValid() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+        trainer.setLastName("Смирнова");
+
+        WorkoutType workoutType = new WorkoutType();
+        workoutType.setId(1L);
+
+        WorkoutSession session = new WorkoutSession();
+        session.setId(1L);
+
+        WorkoutSessionDto response = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(1L)).thenReturn(Optional.of(workoutType));
+        when(workoutSessionMapper.toEntity(any(WorkoutSessionDto.class))).thenReturn(session);
+        when(workoutSessionRepository.save(any(WorkoutSession.class))).thenReturn(session);
+        when(workoutSessionMapper.toDto(any(WorkoutSession.class))).thenReturn(response);
+
+        List<WorkoutSessionDto> result = workoutSessionService.createSessionsBulkWithoutTransaction(dtos);
+
+        assertThat(result).hasSize(1);
+        verify(workoutSessionRepository).save(any(WorkoutSession.class));
+    }
+
+    @Test
+    void createSessionsBulkWithoutTransaction_ShouldThrowException_WhenTrainerNotFound() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(999L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithoutTransaction(dtos))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+    @Test
+    void createSessionsBulkWithTransaction_ShouldThrowException_WhenTrainerNotFound() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(999L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithTransaction(dtos))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+
+    @Test
+    void getSessionsByTrainerLastNameAndDayCached_ShouldReturnCachedValue_WhenHit() {
+        String lastName = "Смирнова";
+        DayOfWeek day = DayOfWeek.MONDAY;
+        int page = 0;
+        int size = 10;
+
+        Page<WorkoutSessionDto> cachedPage = new PageImpl<>(List.of(new WorkoutSessionDto()));
+        SessionSearchKey key = new SessionSearchKey(lastName, day, page, size, "startTime");
+
+        when(sessionCache.get(key)).thenReturn(cachedPage);
+
+        Page<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainerLastNameAndDayCached(lastName, day, page, size);
+
+        assertThat(result).isEqualTo(cachedPage);
+        verify(workoutSessionRepository, never()).findByTrainerLastNameAndDay(any(), any(), any());
+    }
+
+
+
+    @Test
+    void updateSession_ShouldThrowException_WhenOverlapWithOtherSession() {
+        Long id = 1L;
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(1L);
+        dto.setWorkoutTypeId(1L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+        dto.setStatus(WorkoutSessionStatus.SCHEDULED);
+
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(id);
+        existing.setTrainer(new Trainer());
+
+        WorkoutSession overlappingSession = new WorkoutSession();
+        overlappingSession.setId(2L);
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(List.of(overlappingSession));
+
+        assertThatThrownBy(() -> workoutSessionService.updateSession(id, dto))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("уже есть тренировка");
+    }
+
+    @Test
+    void createSessionsBulkWithTransaction_ShouldThrowException_WhenWorkoutTypeNotFound() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(999L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithTransaction(dtos))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+    @Test
+    void createSessionsBulkWithoutTransaction_ShouldThrowException_WhenWorkoutTypeNotFound() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(999L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithoutTransaction(dtos))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+    @Test
+    void createSessionsBulkWithTransaction_ShouldThrowException_WhenOverlap() {
+        WorkoutSessionDto dto = WorkoutSessionDto.builder()
+                .trainerId(1L)
+                .workoutTypeId(1L)
+                .dayOfWeek(DayOfWeek.MONDAY)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 30))
+                .maxParticipants(10)
+                .build();
+
+        List<WorkoutSessionDto> dtos = List.of(dto);
+
+        when(workoutSessionRepository.findOverlappingSessionsForTrainer(any(), any(), any(), any()))
+                .thenReturn(List.of(new WorkoutSession()));
+
+        assertThatThrownBy(() -> workoutSessionService.createSessionsBulkWithTransaction(dtos))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("уже есть тренировка");
+    }
+
+    @Test
+    void validateTimeRange_ShouldNotThrowException_WhenStartBeforeEnd() {
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 0));
+        dto.setTrainerId(1L);
+        dto.setWorkoutTypeId(1L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setMaxParticipants(10);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+        WorkoutType workoutType = new WorkoutType();
+        workoutType.setId(1L);
+        WorkoutSession session = new WorkoutSession();
+        WorkoutSessionDto response = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(1L)).thenReturn(Optional.of(workoutType));
+        when(workoutSessionMapper.toEntity(any(WorkoutSessionDto.class))).thenReturn(session);
+        when(workoutSessionRepository.save(any(WorkoutSession.class))).thenReturn(session);
+        when(workoutSessionMapper.toDto(any(WorkoutSession.class))).thenReturn(response);
+
+        WorkoutSessionDto result = workoutSessionService.createSession(dto);
+
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void getSessionsByTrainer_ShouldReturnEmptyList_WhenTrainerIdNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByTrainer(null);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getSessionsByDay_ShouldReturnEmptyList_WhenDayOfWeekNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByDay(null);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getSessionsByWorkoutType_ShouldReturnEmptyList_WhenWorkoutTypeIdNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByWorkoutType(null);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getSessionsByStatus_ShouldReturnEmptyList_WhenStatusNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByStatus(null);
+
+        assertThat(result).isEmpty();
+    }
+
 }
