@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,20 +38,23 @@ class LoggingAspectTest {
         when(joinPoint.getArgs()).thenReturn(args);
         when(joinPoint.proceed()).thenReturn(result);
 
-        loggingAspect.logMethodExecution(joinPoint);
+        Object actualResult = loggingAspect.logMethodExecution(joinPoint);
 
+        assertThat(actualResult).isEqualTo(result);
         verify(joinPoint).proceed();
     }
 
     @Test
     void logMethodExecution_ShouldLogEntryWithoutParams_WhenNoArgs() throws Throwable {
         Object[] args = new Object[]{};
+        Object result = new Object();
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(joinPoint.proceed()).thenReturn(new Object());
+        when(joinPoint.proceed()).thenReturn(result);
 
-        loggingAspect.logMethodExecution(joinPoint);
+        Object actualResult = loggingAspect.logMethodExecution(joinPoint);
 
+        assertThat(actualResult).isEqualTo(result);
         verify(joinPoint).proceed();
     }
 
@@ -65,24 +69,9 @@ class LoggingAspectTest {
         try {
             loggingAspect.logMethodExecution(joinPoint);
         } catch (Exception e) {
-            // expected
+            assertThat(e).isEqualTo(exception);
         }
 
         verify(joinPoint).proceed();
-    }
-
-    @Test
-    void serviceMethods_ShouldBePointcut() {
-        loggingAspect.serviceMethods();
-    }
-
-    @Test
-    void controllerMethods_ShouldBePointcut() {
-        loggingAspect.controllerMethods();
-    }
-
-    @Test
-    void repositoryMethods_ShouldBePointcut() {
-        loggingAspect.repositoryMethods();
     }
 }
