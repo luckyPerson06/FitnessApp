@@ -12,7 +12,6 @@ import ru.univ.grain.dto.VisitDto;
 import ru.univ.grain.mapper.VisitMapper;
 import ru.univ.grain.exception.*;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +25,6 @@ public class VisitService {
     private final WorkoutSessionRepository workoutSessionRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final VisitMapper visitMapper;
-
 
     private static final String VISIT_NOT_FOUND = "Визит с id %d не найден";
     private static final String CLIENT_NOT_FOUND = "Клиент с id %d не найден";
@@ -42,17 +40,13 @@ public class VisitService {
 
     private VisitComponents loadVisitComponents(final VisitDto dto) {
         final Client client = clientRepository.findById(dto.getClientId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(CLIENT_NOT_FOUND, dto.getClientId())));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, dto.getClientId())));
 
         final WorkoutSession session = workoutSessionRepository.findById(dto.getWorkoutSessionId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(SESSION_NOT_FOUND, dto.getWorkoutSessionId())));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(SESSION_NOT_FOUND, dto.getWorkoutSessionId())));
 
         final Subscription subscription = dto.getSubscriptionId() != null
-                ? subscriptionRepository.findById(dto.getSubscriptionId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(SUBSCRIPTION_NOT_FOUND, dto.getSubscriptionId())))
+                ? subscriptionRepository.findById(dto.getSubscriptionId()).orElse(null)
                 : null;
 
         return new VisitComponents(client, session, subscription);
@@ -68,20 +62,17 @@ public class VisitService {
     @Transactional(readOnly = true)
     public VisitDto getVisitById(final Long id) {
         final Visit visit = visitRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(VISIT_NOT_FOUND, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(VISIT_NOT_FOUND, id)));
         return visitMapper.toDto(visit);
     }
 
     @Transactional
     public VisitDto createVisit(final VisitDto dto) {
         final VisitComponents components = loadVisitComponents(dto);
-
         final Visit visit = visitMapper.toEntity(dto);
         visit.setClient(components.client());
         visit.setWorkoutSession(components.session());
         visit.setSubscription(components.subscription());
-
         final Visit saved = visitRepository.save(visit);
         return visitMapper.toDto(saved);
     }
@@ -89,8 +80,7 @@ public class VisitService {
     @Transactional
     public VisitDto updateVisit(final Long id, final VisitDto dto) {
         final Visit existing = visitRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(VISIT_NOT_FOUND, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(VISIT_NOT_FOUND, id)));
 
         final VisitComponents components = loadVisitComponents(dto);
 
@@ -106,27 +96,22 @@ public class VisitService {
     @Transactional
     public void deleteVisit(final Long id) {
         final Visit visit = visitRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(VISIT_NOT_FOUND, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(VISIT_NOT_FOUND, id)));
         visitRepository.delete(visit);
     }
 
     @Transactional
     public VisitDto bookWorkout(final Long clientId, final Long sessionId, final Long subscriptionId) {
         final Client client = clientRepository.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(CLIENT_NOT_FOUND, clientId)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, clientId)));
 
         final WorkoutSession session = workoutSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(SESSION_NOT_FOUND, sessionId)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(SESSION_NOT_FOUND, sessionId)));
 
         final Subscription subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(SUBSCRIPTION_NOT_FOUND, subscriptionId)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(SUBSCRIPTION_NOT_FOUND, subscriptionId)));
 
-        if (session.getStatus() != WorkoutSessionStatus.SCHEDULED &&
-                session.getStatus() != WorkoutSessionStatus.CONFIRMED) {
+        if (session.getStatus() != WorkoutSessionStatus.SCHEDULED && session.getStatus() != WorkoutSessionStatus.CONFIRMED) {
             throw new BusinessException(SESSION_NOT_AVAILABLE);
         }
 
@@ -149,7 +134,7 @@ public class VisitService {
         }
 
         final LocalDate today = LocalDate.now();
-        final LocalDate visitDate = findNextDateForDayOfWeek(today, session.getDayOfWeek());
+        final LocalDate visitDate = today.with(session.getDayOfWeek());
         final LocalDateTime visitDateTime = LocalDateTime.of(visitDate, session.getStartTime());
 
         final Visit visit = Visit.builder()
@@ -164,25 +149,20 @@ public class VisitService {
         return visitMapper.toDto(saved);
     }
 
-    private LocalDate findNextDateForDayOfWeek(final LocalDate from, final DayOfWeek targetDay) {
-        int daysUntil = targetDay.getValue() - from.getDayOfWeek().getValue();
-        if (daysUntil < 0) {
-            daysUntil += 7;
-        }
-        return from.plusDays(daysUntil);
-    }
-
     @Transactional
     public VisitDto markAttendance(final Long visitId, final boolean attended) {
         final Visit visit = visitRepository.findById(visitId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(VISIT_NOT_FOUND, visitId)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(VISIT_NOT_FOUND, visitId)));
 
         if (visit.getStatus() != VisitStatus.BOOKED) {
             throw new BusinessException(INVALID_VISIT_STATUS);
         }
 
-        visit.setStatus(attended ? VisitStatus.ATTENDED : VisitStatus.NO_SHOW);
+        if (attended) {
+            visit.setStatus(VisitStatus.ATTENDED);
+        } else {
+            visit.setStatus(VisitStatus.NO_SHOW);
+        }
 
         final Visit updated = visitRepository.save(visit);
         return visitMapper.toDto(updated);
@@ -191,8 +171,7 @@ public class VisitService {
     @Transactional
     public VisitDto cancelBooking(final Long visitId) {
         final Visit visit = visitRepository.findById(visitId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(VISIT_NOT_FOUND, visitId)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(VISIT_NOT_FOUND, visitId)));
 
         if (visit.getStatus() != VisitStatus.BOOKED) {
             throw new BusinessException(INVALID_VISIT_STATUS);

@@ -416,7 +416,4 @@ public class WorkoutSessionService {
 
         return workoutSessionMapper.toDto(saved);
     }
-
-
-
 }

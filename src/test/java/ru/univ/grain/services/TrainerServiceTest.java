@@ -370,4 +370,143 @@ class TrainerServiceTest {
         assertThat(stats[1]).isEqualTo(1);
         assertThat(stats[2]).isZero();
     }
+
+    @Test
+    void getAllTrainers_ShouldReturnEmptyList_WhenNoTrainers() {
+        when(trainerRepository.findAll()).thenReturn(List.of());
+
+        List<TrainerDto> result = trainerService.getAllTrainers();
+
+        assertThat(result).isEmpty();
+    }
+
+
+
+    @Test
+    void addSpecialization_ShouldNotAdd_WhenAlreadyExists() {
+        Long trainerId = 1L;
+        Long workoutTypeId = 1L;
+
+        WorkoutType workoutType = new WorkoutType();
+        workoutType.setId(workoutTypeId);
+
+        Set<WorkoutType> specializations = new HashSet<>();
+        specializations.add(workoutType);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(trainerId);
+        trainer.setSpecializations(specializations);
+
+        when(trainerRepository.findById(trainerId)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(workoutTypeId)).thenReturn(Optional.of(workoutType));
+
+        trainerService.addSpecialization(trainerId, workoutTypeId);
+
+        assertThat(trainer.getSpecializations()).hasSize(1);
+        verify(trainerRepository, never()).save(any());
+    }
+
+    @Test
+    void removeSpecialization_ShouldThrowException_WhenTrainerNotFound() {
+        Long trainerId = 999L;
+        Long workoutTypeId = 1L;
+
+        when(trainerRepository.findById(trainerId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> trainerService.removeSpecialization(trainerId, workoutTypeId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(trainerRepository, never()).save(any());
+    }
+
+    @Test
+    void getTrainersByStatus_ShouldReturnEmptyList_WhenStatusIsNull() {
+        List<TrainerDto> result = trainerService.getTrainersByStatus(null);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getTrainersByStatus_ShouldReturnEmptyList_WhenNoTrainers() {
+        TrainerStatus status = TrainerStatus.VACATION;
+
+        when(trainerRepository.findByStatus(status)).thenReturn(List.of());
+
+        List<TrainerDto> result = trainerService.getTrainersByStatus(status);
+
+        assertThat(result).isEmpty();
+    }
+
+
+    @Test
+    void getActiveTrainers_ShouldReturnEmptyList_WhenNoActiveTrainers() {
+        when(trainerRepository.findByStatusIn(List.of(TrainerStatus.ACTIVE))).thenReturn(List.of());
+
+        List<TrainerDto> result = trainerService.getActiveTrainers();
+
+        assertThat(result).isEmpty();
+        verify(trainerRepository).findByStatusIn(List.of(TrainerStatus.ACTIVE));
+    }
+
+    @Test
+    void getTrainersBySpecialization_ShouldReturnEmptyList_WhenSpecializationNameIsNull() {
+        List<TrainerDto> result = trainerService.getTrainersBySpecialization(null);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getTrainersBySpecialization_ShouldReturnEmptyList_WhenSpecializationNameIsBlank() {
+        List<TrainerDto> result = trainerService.getTrainersBySpecialization("");
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getTrainersBySpecialization_ShouldReturnEmptyList_WhenNoTrainers() {
+        String specialization = "Несуществующая";
+
+        when(trainerRepository.findBySpecializationName(specialization)).thenReturn(List.of());
+
+        List<TrainerDto> result = trainerService.getTrainersBySpecialization(specialization);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getTrainersWithSessionOnDay_ShouldReturnEmptyList_WhenDayOfWeekIsNull() {
+        List<TrainerDto> result = trainerService.getTrainersWithSessionOnDay(null);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getTrainersWithSessionOnDay_ShouldReturnEmptyList_WhenNoTrainers() {
+        DayOfWeek day = DayOfWeek.MONDAY;
+
+        when(trainerRepository.findTrainersWithSessionOnDay(day)).thenReturn(List.of());
+
+        List<TrainerDto> result = trainerService.getTrainersWithSessionOnDay(day);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void demonstrateNPlus1Problem_ShouldReturnZeroStats_WhenNoTrainers() {
+        when(trainerRepository.findAll()).thenReturn(List.of());
+
+        int[] stats = trainerService.demonstrateNPlus1Problem();
+
+        assertThat(stats[0]).isZero();
+        assertThat(stats[1]).isZero();
+        assertThat(stats[2]).isZero();
+    }
+
+    @Test
+    void demonstrateSolution_ShouldReturnZeroStats_WhenNoTrainers() {
+        when(trainerRepository.findAllWithDetails()).thenReturn(List.of());
+
+        int[] stats = trainerService.demonstrateSolution();
+
+        assertThat(stats[0]).isZero();
+        assertThat(stats[1]).isZero();
+        assertThat(stats[2]).isZero();
+    }
 }

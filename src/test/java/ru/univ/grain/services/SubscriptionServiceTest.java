@@ -815,4 +815,36 @@ class SubscriptionServiceTest {
         assertThat(result).hasSize(1);
         verify(subscriptionRepository).findByStatus(SubscriptionStatus.USED);
     }
+
+
+    @Test
+    void updateSubscription_ShouldThrowException_WhenNotFound() {
+        Long id = 999L;
+        SubscriptionDto dto = SubscriptionDto.builder().name("Тест").build();
+
+        when(subscriptionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.updateSubscription(id, dto))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+
+
+    @Test
+    void removeWorkoutType_ShouldThrowException_WhenSubscriptionNotFound() {
+        Long subscriptionId = 999L;
+        Long workoutTypeId = 1L;
+
+        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> subscriptionService.removeWorkoutType(subscriptionId, workoutTypeId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
 }

@@ -213,6 +213,36 @@ class WorkoutTypeServiceTest {
     }
 
     @Test
+    void updateWorkoutType_ShouldSkipDuplicateLookup_WhenNameUnchangedIgnoringCase() {
+        Long id = 1L;
+        WorkoutTypeDto dto = new WorkoutTypeDto();
+        dto.setName("йога");
+        dto.setCategory(WorkoutCategory.GROUP);
+
+        WorkoutType existing = new WorkoutType();
+        existing.setId(id);
+        existing.setName("ЙОГА");
+
+        WorkoutType updated = new WorkoutType();
+        updated.setId(id);
+        updated.setName(dto.getName());
+
+        WorkoutTypeDto responseDto = new WorkoutTypeDto();
+        responseDto.setName(dto.getName());
+
+        when(workoutTypeRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutTypeRepository.save(existing)).thenReturn(updated);
+        when(workoutTypeMapper.toDto(updated)).thenReturn(responseDto);
+
+        WorkoutTypeDto result = workoutTypeService.updateWorkoutType(id, dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(dto.getName());
+        verify(workoutTypeRepository, never()).findByNameIgnoreCase(dto.getName());
+        verify(workoutTypeMapper).updateEntity(dto, existing);
+    }
+
+    @Test
     void deactivateWorkoutType_ShouldSetActiveFalse_WhenExists() {
         Long id = 1L;
         WorkoutType workoutType = new WorkoutType();

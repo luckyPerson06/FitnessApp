@@ -18,6 +18,7 @@ import ru.univ.grain.exception.ResourceNotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,8 +48,11 @@ public class ClientService {
 
     @Transactional
     public ClientResponseDto updateClient(final Long id, final ClientPatchDto dto) {
-        final Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, id)));
+        final Optional<Client> optionalClient = clientRepository.findById(id);
+        if (optionalClient.isEmpty()) {
+            throw new ResourceNotFoundException(String.format(CLIENT_NOT_FOUND, id));
+        }
+        final Client client = optionalClient.get();
 
         if (dto.getEmail() != null &&
                 !client.getEmail().equals(dto.getEmail()) &&
@@ -169,9 +173,7 @@ public class ClientService {
                 });
 
         final Client client = clientMapper.toEntity(clientDto);
-        if (client.getSubscriptions() == null) {
-            client.setSubscriptions(new ArrayList<>());
-        }
+        client.setSubscriptions(new ArrayList<>());
 
         final Client savedClient = clientRepository.save(client);
 

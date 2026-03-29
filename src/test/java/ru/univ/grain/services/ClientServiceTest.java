@@ -49,9 +49,6 @@ class ClientServiceTest {
     @InjectMocks
     private ClientService clientService;
 
-
-
-
     @Test
     void createClient_ShouldReturnClient_WhenEmailIsUnique() {
         ClientDto dto = new ClientDto();
@@ -205,6 +202,66 @@ class ClientServiceTest {
     }
 
     @Test
+    void updateClient_ShouldNotCheckEmail_WhenEmailIsNull() {
+        Long clientId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setFirstName("Анна");
+        patchDto.setEmail(null);
+
+        Client existingClient = new Client();
+        existingClient.setId(clientId);
+        existingClient.setEmail("ivan@mail.com");
+        existingClient.setFirstName("Иван");
+
+        Client updatedClient = new Client();
+        updatedClient.setId(clientId);
+        updatedClient.setFirstName("Анна");
+
+        ClientResponseDto responseDto = new ClientResponseDto();
+        responseDto.setId(clientId);
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.save(any(Client.class))).thenReturn(updatedClient);
+        when(clientMapper.toResponseDto(updatedClient)).thenReturn(responseDto);
+
+        ClientResponseDto result = clientService.updateClient(clientId, patchDto);
+
+        assertThat(result).isNotNull();
+        verify(clientRepository, never()).existsByEmail(anyString());
+        verify(clientMapper).updateEntity(patchDto, existingClient);
+    }
+
+    @Test
+    void updateClient_ShouldNotCheckEmail_WhenEmailSame() {
+        Long clientId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setEmail("ivan@mail.com");
+        patchDto.setFirstName("Анна");
+
+        Client existingClient = new Client();
+        existingClient.setId(clientId);
+        existingClient.setEmail("ivan@mail.com");
+        existingClient.setFirstName("Иван");
+
+        Client updatedClient = new Client();
+        updatedClient.setId(clientId);
+        updatedClient.setFirstName("Анна");
+
+        ClientResponseDto responseDto = new ClientResponseDto();
+        responseDto.setId(clientId);
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.save(any(Client.class))).thenReturn(updatedClient);
+        when(clientMapper.toResponseDto(updatedClient)).thenReturn(responseDto);
+
+        ClientResponseDto result = clientService.updateClient(clientId, patchDto);
+
+        assertThat(result).isNotNull();
+        verify(clientRepository, never()).existsByEmail(anyString());
+        verify(clientMapper).updateEntity(patchDto, existingClient);
+    }
+
+    @Test
     void deleteClientById_ShouldDeleteClient_WhenExists() {
         Long clientId = 1L;
         Client client = new Client();
@@ -324,6 +381,39 @@ class ClientServiceTest {
     }
 
     @Test
+    void addSubscriptionToClient_ShouldThrowException_WhenClientNotFound() {
+        Long clientId = 999L;
+        Long subscriptionId = 1L;
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> clientService.addSubscriptionToClient(clientId, subscriptionId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(clientRepository, never()).save(any());
+    }
+
+    @Test
+    void addSubscriptionToClient_ShouldThrowException_WhenSubscriptionNotFound() {
+        Long clientId = 1L;
+        Long subscriptionId = 999L;
+
+        Client client = new Client();
+        client.setId(clientId);
+        client.setSubscriptions(new ArrayList<>());
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
+        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> clientService.addSubscriptionToClient(clientId, subscriptionId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(clientRepository, never()).save(any());
+    }
+
+    @Test
     void getClientsByLastName_ShouldReturnList() {
         String lastName = "Иванов";
         Client client = new Client();
@@ -339,6 +429,17 @@ class ClientServiceTest {
         List<ClientResponseDto> result = clientService.getClientsByLastName(lastName);
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getClientsByLastName_ShouldReturnEmptyList_WhenNoClients() {
+        String lastName = "НесуществующаяФамилия";
+
+        when(clientRepository.findByLastNameIgnoreCase(lastName)).thenReturn(List.of());
+
+        List<ClientResponseDto> result = clientService.getClientsByLastName(lastName);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -387,6 +488,20 @@ class ClientServiceTest {
     }
 
     @Test
+    void removeSubscriptionFromClient_ShouldThrowException_WhenClientNotFound() {
+        Long clientId = 999L;
+        Long subscriptionId = 1L;
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> clientService.removeSubscriptionFromClient(clientId, subscriptionId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+
+        verify(clientRepository, never()).save(any());
+    }
+
+    @Test
     void getClientsWithActiveSubscriptions_ShouldReturnList() {
         Client client = new Client();
         client.setId(1L);
@@ -400,6 +515,15 @@ class ClientServiceTest {
         List<ClientResponseDto> result = clientService.getClientsWithActiveSubscriptions();
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getClientsWithActiveSubscriptions_ShouldReturnEmptyList_WhenNoClients() {
+        when(clientRepository.findClientsWithActiveSubscriptions()).thenReturn(List.of());
+
+        List<ClientResponseDto> result = clientService.getClientsWithActiveSubscriptions();
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -417,6 +541,17 @@ class ClientServiceTest {
         List<ClientResponseDto> result = clientService.getBookedClientsForSession(sessionId);
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getBookedClientsForSession_ShouldReturnEmptyList_WhenNoClients() {
+        Long sessionId = 999L;
+
+        when(clientRepository.findBookedClientsBySession(sessionId)).thenReturn(List.of());
+
+        List<ClientResponseDto> result = clientService.getBookedClientsForSession(sessionId);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -457,6 +592,47 @@ class ClientServiceTest {
 
         Client client = new Client();
         client.setId(1L);
+        client.setSubscriptions(new ArrayList<>());
+
+        Subscription subscription = new Subscription();
+        subscription.setId(1L);
+
+        ClientResponseDto response = new ClientResponseDto();
+        response.setId(1L);
+
+        when(clientRepository.existsByEmail(clientDto.getEmail())).thenReturn(false);
+        when(subscriptionRepository.findByName(subscriptionDto.getName())).thenReturn(Optional.empty());
+        when(clientMapper.toEntity(clientDto)).thenReturn(client);
+        when(clientRepository.save(any(Client.class))).thenReturn(client);
+        when(subscriptionMapper.toEntity(subscriptionDto)).thenReturn(subscription);
+        when(subscriptionRepository.save(any(Subscription.class))).thenReturn(subscription);
+        when(clientMapper.toResponseDto(client)).thenReturn(response);
+
+        ClientResponseDto result = clientService.createClientWithNewSubscription(clientDto, subscriptionDto);
+
+        assertThat(result).isNotNull();
+        verify(clientRepository, times(2)).save(any(Client.class));
+        verify(subscriptionRepository).save(any(Subscription.class));
+    }
+
+    @Test
+    void createClientWithNewSubscription_ShouldCreateBoth_WhenClientSubscriptionsNotNull() {
+        ClientDto clientDto = new ClientDto();
+        clientDto.setEmail("new@mail.com");
+        clientDto.setFirstName("Иван");
+        clientDto.setLastName("Иванов");
+
+        SubscriptionDto subscriptionDto = new SubscriptionDto();
+        subscriptionDto.setName("Новый абонемент");
+        subscriptionDto.setPrice(BigDecimal.valueOf(3000));
+        subscriptionDto.setSubscriptionType(SubscriptionType.LIMITED);
+        subscriptionDto.setMaxVisits(8);
+        subscriptionDto.setDurationDays(30);
+
+        Client client = new Client();
+        client.setId(1L);
+        client.setSubscriptions(new ArrayList<>());
+        client.getSubscriptions().add(new Subscription());
 
         Subscription subscription = new Subscription();
         subscription.setId(1L);
@@ -497,81 +673,6 @@ class ClientServiceTest {
     }
 
     @Test
-    void addSubscriptionToClient_ShouldThrowException_WhenClientNotFound() {
-        Long clientId = 999L;
-        Long subscriptionId = 1L;
-
-        when(clientRepository.findById(clientId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> clientService.addSubscriptionToClient(clientId, subscriptionId))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("не найден");
-
-        verify(clientRepository, never()).save(any());
-    }
-
-    @Test
-    void addSubscriptionToClient_ShouldThrowException_WhenSubscriptionNotFound() {
-        Long clientId = 1L;
-        Long subscriptionId = 999L;
-
-        Client client = new Client();
-        client.setId(clientId);
-        client.setSubscriptions(new ArrayList<>());
-
-        when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
-        when(subscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> clientService.addSubscriptionToClient(clientId, subscriptionId))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("не найден");
-
-        verify(clientRepository, never()).save(any());
-    }
-
-    @Test
-    void getClientsByLastName_ShouldReturnEmptyList_WhenNoClients() {
-        String lastName = "НесуществующаяФамилия";
-
-        when(clientRepository.findByLastNameIgnoreCase(lastName)).thenReturn(List.of());
-
-        List<ClientResponseDto> result = clientService.getClientsByLastName(lastName);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getClientsByStatus_ShouldReturnEmptyList_WhenNoClients() {
-        ClientStatus status = ClientStatus.BLOCKED;
-
-        when(clientRepository.findByStatus(status)).thenReturn(List.of());
-
-        List<ClientResponseDto> result = clientService.getClientsByStatus(status);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getClientsWithActiveSubscriptions_ShouldReturnEmptyList_WhenNoClients() {
-        when(clientRepository.findClientsWithActiveSubscriptions()).thenReturn(List.of());
-
-        List<ClientResponseDto> result = clientService.getClientsWithActiveSubscriptions();
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getBookedClientsForSession_ShouldReturnEmptyList_WhenNoClients() {
-        Long sessionId = 999L;
-
-        when(clientRepository.findBookedClientsBySession(sessionId)).thenReturn(List.of());
-
-        List<ClientResponseDto> result = clientService.getBookedClientsForSession(sessionId);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
     void createClientWithNewSubscription_ShouldThrowException_WhenSubscriptionNameExists() {
         ClientDto clientDto = new ClientDto();
         clientDto.setEmail("new@mail.com");
@@ -580,16 +681,9 @@ class ClientServiceTest {
 
         SubscriptionDto subscriptionDto = new SubscriptionDto();
         subscriptionDto.setName("Существующий абонемент");
-        subscriptionDto.setPrice(BigDecimal.valueOf(3000));
-        subscriptionDto.setSubscriptionType(SubscriptionType.LIMITED);
-        subscriptionDto.setMaxVisits(8);
-        subscriptionDto.setDurationDays(30);
-
-        Subscription existingSubscription = new Subscription();
-        existingSubscription.setName("Существующий абонемент");
 
         when(clientRepository.existsByEmail(clientDto.getEmail())).thenReturn(false);
-        when(subscriptionRepository.findByName(subscriptionDto.getName())).thenReturn(Optional.of(existingSubscription));
+        when(subscriptionRepository.findByName(subscriptionDto.getName())).thenReturn(Optional.of(new Subscription()));
 
         assertThatThrownBy(() -> clientService.createClientWithNewSubscription(clientDto, subscriptionDto))
                 .isInstanceOf(DuplicateResourceException.class)
@@ -600,13 +694,94 @@ class ClientServiceTest {
     }
 
     @Test
-    void removeSubscriptionFromClient_ShouldThrowException_WhenClientNotFound() {
+    void getClientsByStatus_ShouldReturnEmptyList_WhenStatusIsNull() {
+        List<ClientResponseDto> result = clientService.getClientsByStatus(null);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getBookedClientsForSession_ShouldReturnEmptyList_WhenSessionIdIsNull() {
+        List<ClientResponseDto> result = clientService.getBookedClientsForSession(null);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void updateClient_ShouldUpdateClient_WhenEmailDifferentButNotExists() {
+        Long clientId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setEmail("new@mail.com");
+        patchDto.setFirstName("Анна");
+
+        Client existingClient = new Client();
+        existingClient.setId(clientId);
+        existingClient.setEmail("old@mail.com");
+        existingClient.setFirstName("Иван");
+
+        Client updatedClient = new Client();
+        updatedClient.setId(clientId);
+        updatedClient.setEmail("new@mail.com");
+        updatedClient.setFirstName("Анна");
+
+        ClientResponseDto responseDto = new ClientResponseDto();
+        responseDto.setId(clientId);
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.existsByEmail("new@mail.com")).thenReturn(false);
+        when(clientRepository.save(any(Client.class))).thenReturn(updatedClient);
+        when(clientMapper.toResponseDto(updatedClient)).thenReturn(responseDto);
+
+        ClientResponseDto result = clientService.updateClient(clientId, patchDto);
+
+        assertThat(result).isNotNull();
+        verify(clientRepository).existsByEmail("new@mail.com");
+        verify(clientMapper).updateEntity(patchDto, existingClient);
+        verify(clientRepository).save(existingClient);
+    }
+
+    @Test
+    void updateClient_ShouldUpdateClient_WhenEmailIsEmptyString() {
+        Long clientId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setEmail("");
+        patchDto.setFirstName("Анна");
+
+        Client existingClient = new Client();
+        existingClient.setId(clientId);
+        existingClient.setEmail("old@mail.com");
+        existingClient.setFirstName("Иван");
+
+        Client updatedClient = new Client();
+        updatedClient.setId(clientId);
+        updatedClient.setFirstName("Анна");
+
+        ClientResponseDto responseDto = new ClientResponseDto();
+        responseDto.setId(clientId);
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.existsByEmail("")).thenReturn(false);
+        when(clientRepository.save(any(Client.class))).thenReturn(updatedClient);
+        when(clientMapper.toResponseDto(updatedClient)).thenReturn(responseDto);
+
+        ClientResponseDto result = clientService.updateClient(clientId, patchDto);
+
+        assertThat(result).isNotNull();
+        verify(clientMapper).updateEntity(patchDto, existingClient);
+        verify(clientRepository).save(existingClient);
+    }
+
+
+
+    @Test
+    void updateClient_ShouldThrowException_WhenClientNotFound() {
         Long clientId = 999L;
-        Long subscriptionId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setFirstName("Анна");
 
         when(clientRepository.findById(clientId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> clientService.removeSubscriptionFromClient(clientId, subscriptionId))
+        assertThatThrownBy(() -> clientService.updateClient(clientId, patchDto))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("не найден");
 
@@ -614,20 +789,20 @@ class ClientServiceTest {
     }
 
     @Test
-    void updateClient_ShouldUpdateClient_WhenOnlyPhoneNumberChanged() {
+    void updateClient_ShouldNotCheckEmail_WhenEmailSameButExists() {
         Long clientId = 1L;
         ClientPatchDto patchDto = new ClientPatchDto();
-        patchDto.setPhoneNumber("+79998887766");
+        patchDto.setEmail("old@mail.com");
+        patchDto.setFirstName("Анна");
 
         Client existingClient = new Client();
         existingClient.setId(clientId);
-        existingClient.setEmail("ivan@mail.com");
+        existingClient.setEmail("old@mail.com");
         existingClient.setFirstName("Иван");
-        existingClient.setLastName("Иванов");
 
         Client updatedClient = new Client();
         updatedClient.setId(clientId);
-        updatedClient.setPhoneNumber("+79998887766");
+        updatedClient.setFirstName("Анна");
 
         ClientResponseDto responseDto = new ClientResponseDto();
         responseDto.setId(clientId);
@@ -639,8 +814,34 @@ class ClientServiceTest {
         ClientResponseDto result = clientService.updateClient(clientId, patchDto);
 
         assertThat(result).isNotNull();
+        // Проверяем, что existsByEmail НЕ вызывался (так как email совпадает)
+        verify(clientRepository, never()).existsByEmail(anyString());
         verify(clientMapper).updateEntity(patchDto, existingClient);
         verify(clientRepository).save(existingClient);
+    }
+
+
+
+
+    @Test
+    void updateClient_ShouldThrowException_WhenEmailConflictAndMapperNotCalled() {
+        Long clientId = 1L;
+        ClientPatchDto patchDto = new ClientPatchDto();
+        patchDto.setEmail("new@mail.com");
+
+        Client existingClient = new Client();
+        existingClient.setId(clientId);
+        existingClient.setEmail("old@mail.com");
+
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.existsByEmail("new@mail.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> clientService.updateClient(clientId, patchDto))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("уже существует");
+
+        verify(clientRepository, never()).save(any());
+        verify(clientMapper, never()).updateEntity(any(), any());
     }
 
 }

@@ -1423,4 +1423,262 @@ class WorkoutSessionServiceTest {
         assertThat(result).isEmpty();
     }
 
+
+
+    @Test
+    void getActiveSessionsByDay_ShouldReturnEmptyList_WhenDayOfWeekIsNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getActiveSessionsByDay(null);
+        assertThat(result).isEmpty();
+    }
+
+
+
+    @Test
+    void getSessionsByTime_ShouldReturnEmptyList_WhenDayOfWeekIsNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByTime(null, LocalTime.of(10, 0));
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getSessionsByTime_ShouldReturnEmptyList_WhenTimeIsNull() {
+        List<WorkoutSessionDto> result = workoutSessionService.getSessionsByTime(DayOfWeek.MONDAY, null);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getBookedCount_ShouldReturnZero_WhenSessionIdIsNull() {
+        long result = workoutSessionService.getBookedCount(null);
+        assertThat(result).isZero();
+    }
+
+    @Test
+    void deleteSession_ShouldThrowException_WhenSessionNotFound() {
+        Long id = 999L;
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.deleteSession(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найдена");
+    }
+
+    @Test
+    void createSession_ShouldThrowException_WhenWorkoutTypeNotFound() {
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(1L);
+        dto.setWorkoutTypeId(999L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+        dto.setMaxParticipants(10);
+
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(new Trainer()));
+
+        assertThatThrownBy(() -> workoutSessionService.createSession(dto))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("не найден");
+    }
+
+    @Test
+    void updateSession_ShouldIgnoreOverlapWithSameSessionId() {
+        Long id = 1L;
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(1L);
+        dto.setWorkoutTypeId(1L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+        dto.setStatus(WorkoutSessionStatus.SCHEDULED);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+        trainer.setLastName("Смирнова");
+
+        WorkoutType workoutType = new WorkoutType();
+        workoutType.setId(1L);
+
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(id);
+        existing.setTrainer(trainer);
+
+        WorkoutSession sameSession = new WorkoutSession();
+        sameSession.setId(id);
+
+        WorkoutSession updated = new WorkoutSession();
+        updated.setId(id);
+
+        WorkoutSessionDto responseDto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(List.of(sameSession));
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(1L)).thenReturn(Optional.of(workoutType));
+        when(workoutSessionRepository.save(existing)).thenReturn(updated);
+        when(workoutSessionMapper.toDto(updated)).thenReturn(responseDto);
+
+        WorkoutSessionDto result = workoutSessionService.updateSession(id, dto);
+
+        assertThat(result).isNotNull();
+        verify(workoutSessionMapper).updateEntity(dto, existing);
+        verify(workoutSessionRepository).save(existing);
+    }
+
+    @Test
+    void updateSession_ShouldThrowException_WhenTrainerMissing() {
+        Long id = 1L;
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(999L);
+        dto.setWorkoutTypeId(1L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(id);
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.updateSession(id, dto))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Тренер");
+    }
+
+    @Test
+    void updateSession_ShouldThrowException_WhenWorkoutTypeMissing() {
+        Long id = 1L;
+        WorkoutSessionDto dto = new WorkoutSessionDto();
+        dto.setTrainerId(1L);
+        dto.setWorkoutTypeId(999L);
+        dto.setDayOfWeek(DayOfWeek.MONDAY);
+        dto.setStartTime(LocalTime.of(10, 0));
+        dto.setEndTime(LocalTime.of(11, 30));
+
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(id);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(workoutSessionRepository.findOverlappingSessions(any(), any(), any(), any()))
+                .thenReturn(new ArrayList<>());
+        when(trainerRepository.findById(1L)).thenReturn(Optional.of(trainer));
+        when(workoutTypeRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutSessionService.updateSession(id, dto))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Тип тренировки");
+    }
+
+    @Test
+    void deleteSession_ShouldIgnorePastAndNonBookedVisits() {
+        Long id = 1L;
+        Trainer trainer = new Trainer();
+        trainer.setLastName("Смирнова");
+
+        WorkoutSession session = new WorkoutSession();
+        session.setId(id);
+        session.setTrainer(trainer);
+
+        Visit pastBookedVisit = new Visit();
+        pastBookedVisit.setVisitTime(LocalDateTime.now().minusDays(1));
+        pastBookedVisit.setStatus(VisitStatus.BOOKED);
+
+        Visit futureCancelledVisit = new Visit();
+        futureCancelledVisit.setVisitTime(LocalDateTime.now().plusDays(1));
+        futureCancelledVisit.setStatus(VisitStatus.CANCELLED);
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(session));
+        when(visitRepository.findByWorkoutSessionId(id))
+                .thenReturn(List.of(pastBookedVisit, futureCancelledVisit));
+
+        workoutSessionService.deleteSession(id);
+
+        verify(workoutSessionRepository).delete(session);
+        verify(sessionCache).clearByTrainerLastName("Смирнова");
+    }
+
+    @Test
+    void getBookedCount_ShouldIgnoreFutureVisitsWithNonBookedStatus() {
+        Long sessionId = 1L;
+        Visit futureCancelledVisit = new Visit();
+        futureCancelledVisit.setVisitTime(LocalDateTime.now().plusDays(1));
+        futureCancelledVisit.setStatus(VisitStatus.CANCELLED);
+
+        Visit futureBookedVisit = new Visit();
+        futureBookedVisit.setVisitTime(LocalDateTime.now().plusDays(1));
+        futureBookedVisit.setStatus(VisitStatus.BOOKED);
+
+        when(visitRepository.findByWorkoutSessionId(sessionId))
+                .thenReturn(List.of(futureCancelledVisit, futureBookedVisit));
+
+        long result = workoutSessionService.getBookedCount(sessionId);
+
+        assertThat(result).isEqualTo(1);
+    }
+
+    @Test
+    void updateSessionStatus_ShouldSkipVisitCancellation_WhenSessionAlreadyCompleted() {
+        Long id = 1L;
+        WorkoutSession session = new WorkoutSession();
+        session.setId(id);
+        session.setStatus(WorkoutSessionStatus.COMPLETED);
+
+        Trainer trainer = new Trainer();
+        trainer.setLastName("Смирнова");
+        session.setTrainer(trainer);
+
+        WorkoutSessionDto responseDto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(session));
+        when(workoutSessionRepository.save(session)).thenReturn(session);
+        when(workoutSessionMapper.toDto(session)).thenReturn(responseDto);
+
+        WorkoutSessionDto result = workoutSessionService.updateSessionStatus(id, WorkoutSessionStatus.CANCELLED);
+
+        assertThat(result).isNotNull();
+        assertThat(session.getStatus()).isEqualTo(WorkoutSessionStatus.CANCELLED);
+        verify(visitRepository, never()).findByWorkoutSessionId(id);
+    }
+
+    @Test
+    void updateSessionStatus_ShouldIgnorePastAndNonBookedVisits_WhenCancelled() {
+        Long id = 1L;
+        WorkoutSession session = new WorkoutSession();
+        session.setId(id);
+        session.setStatus(WorkoutSessionStatus.SCHEDULED);
+
+        Trainer trainer = new Trainer();
+        trainer.setLastName("Смирнова");
+        session.setTrainer(trainer);
+
+        Visit pastBookedVisit = new Visit();
+        pastBookedVisit.setVisitTime(LocalDateTime.now().minusDays(1));
+        pastBookedVisit.setStatus(VisitStatus.BOOKED);
+
+        Visit futureCancelledVisit = new Visit();
+        futureCancelledVisit.setVisitTime(LocalDateTime.now().plusDays(1));
+        futureCancelledVisit.setStatus(VisitStatus.CANCELLED);
+
+        WorkoutSessionDto responseDto = new WorkoutSessionDto();
+
+        when(workoutSessionRepository.findById(id)).thenReturn(Optional.of(session));
+        when(visitRepository.findByWorkoutSessionId(id))
+                .thenReturn(List.of(pastBookedVisit, futureCancelledVisit));
+        when(workoutSessionRepository.save(session)).thenReturn(session);
+        when(workoutSessionMapper.toDto(session)).thenReturn(responseDto);
+
+        WorkoutSessionDto result = workoutSessionService.updateSessionStatus(id, WorkoutSessionStatus.CANCELLED);
+
+        assertThat(result).isNotNull();
+        assertThat(pastBookedVisit.getStatus()).isEqualTo(VisitStatus.BOOKED);
+        assertThat(futureCancelledVisit.getStatus()).isEqualTo(VisitStatus.CANCELLED);
+    }
+
 }
