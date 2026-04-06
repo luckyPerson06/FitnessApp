@@ -38,99 +38,13 @@ public class BookingDemoController {
     @SuppressWarnings("java:S2142")
     @PostMapping("/race")
     public ResponseEntity<Map<String, Object>> demonstrateRaceCondition() {
-        demoService.resetDemoSession(DEMO_SESSION_ID);
-
-        final ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-        final CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
-        final AtomicInteger successCount = new AtomicInteger(0);
-        final AtomicInteger failCount = new AtomicInteger(0);
-
-        final long startTime = System.currentTimeMillis();
-
-        for (int i = 1; i <= THREAD_COUNT; i++) {
-            final int clientIndex = i;
-            executor.submit(() -> {
-                try {
-                    final Long clientId = getTestClientId(clientIndex);
-                    final boolean success = demoService.bookWithRaceCondition(clientId, DEMO_SESSION_ID);
-                    if (success) {
-                        successCount.incrementAndGet();
-                    } else {
-                        failCount.incrementAndGet();
-                    }
-                } catch (final Exception e) {
-                    failCount.incrementAndGet();
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        final boolean completed = awaitLatch(latch, executor);
-        final long duration = System.currentTimeMillis() - startTime;
-
-        final Map<String, Object> result = new HashMap<>();
-        result.put(TYPE_KEY, "RACE CONDITION (PROBLEM)");
-        result.put(SESSION_ID_KEY, DEMO_SESSION_ID);
-        result.put(TOTAL_ATTEMPTS_KEY, THREAD_COUNT);
-        result.put(MAX_PARTICIPANTS_KEY, demoService.getMaxParticipants());
-        result.put(SUCCESSFUL_BOOKINGS_KEY, successCount.get());
-        result.put(FAILED_BOOKINGS_KEY, failCount.get());
-        result.put(OVERBOOKING_KEY, successCount.get() - demoService.getMaxParticipants());
-        result.put(DURATION_MS_KEY, duration);
-        result.put(EXPECTED_RESULT_KEY, "Should be > " + demoService.getMaxParticipants() + " bookings (overbooking)");
-        result.put("completed", completed);
-
-        return ResponseEntity.ok(result);
+        return runBookingTest(false);
     }
 
     @SuppressWarnings("java:S2142")
     @PostMapping("/safe")
     public ResponseEntity<Map<String, Object>> demonstrateSafeBooking() {
-        demoService.resetDemoSession(DEMO_SESSION_ID);
-
-        final ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-        final CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
-        final AtomicInteger successCount = new AtomicInteger(0);
-        final AtomicInteger failCount = new AtomicInteger(0);
-
-        final long startTime = System.currentTimeMillis();
-
-        for (int i = 1; i <= THREAD_COUNT; i++) {
-            final int clientIndex = i;
-            executor.submit(() -> {
-                try {
-                    final Long clientId = getTestClientId(clientIndex);
-                    final boolean success = demoService.bookWithAtomicSolution(clientId, DEMO_SESSION_ID);
-                    if (success) {
-                        successCount.incrementAndGet();
-                    } else {
-                        failCount.incrementAndGet();
-                    }
-                } catch (final Exception e) {
-                    failCount.incrementAndGet();
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        final boolean completed = awaitLatch(latch, executor);
-        final long duration = System.currentTimeMillis() - startTime;
-
-        final Map<String, Object> result = new HashMap<>();
-        result.put(TYPE_KEY, "ATOMIC SOLUTION (FIX)");
-        result.put(SESSION_ID_KEY, DEMO_SESSION_ID);
-        result.put(TOTAL_ATTEMPTS_KEY, THREAD_COUNT);
-        result.put(MAX_PARTICIPANTS_KEY, demoService.getMaxParticipants());
-        result.put(SUCCESSFUL_BOOKINGS_KEY, successCount.get());
-        result.put(FAILED_BOOKINGS_KEY, failCount.get());
-        result.put(OVERBOOKING_KEY, successCount.get() - demoService.getMaxParticipants());
-        result.put(DURATION_MS_KEY, duration);
-        result.put(EXPECTED_RESULT_KEY, "Should be exactly " + demoService.getMaxParticipants() + " bookings (no overbooking)");
-        result.put("completed", completed);
-
-        return ResponseEntity.ok(result);
+        return runBookingTest(true);
     }
 
     @PostMapping("/reset")
@@ -154,6 +68,69 @@ public class BookingDemoController {
                 "reset", "POST /api/demo/booking/reset"
         ));
         return ResponseEntity.ok(result);
+    }
+
+    @SuppressWarnings("java:S2142")
+    private ResponseEntity<Map<String, Object>> runBookingTest(final boolean useAtomicSolution) {
+        demoService.resetDemoSession(DEMO_SESSION_ID);
+
+        final ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+        final CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+        final AtomicInteger successCount = new AtomicInteger(0);
+        final AtomicInteger failCount = new AtomicInteger(0);
+
+        final long startTime = System.currentTimeMillis();
+
+        for (int i = 1; i <= THREAD_COUNT; i++) {
+            final int clientIndex = i;
+            executor.submit(() -> {
+                try {
+                    final Long clientId = getTestClientId(clientIndex);
+                    final boolean success = useAtomicSolution
+                            ? demoService.bookWithAtomicSolution(clientId, DEMO_SESSION_ID)
+                            : demoService.bookWithRaceCondition(clientId, DEMO_SESSION_ID);
+                    if (success) {
+                        successCount.incrementAndGet();
+                    } else {
+                        failCount.incrementAndGet();
+                    }
+                } catch (final Exception e) {
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        final boolean completed = awaitLatch(latch, executor);
+        final long duration = System.currentTimeMillis() - startTime;
+
+        final Map<String, Object> result = buildResult(useAtomicSolution, successCount.get(), failCount.get(), duration, completed);
+        return ResponseEntity.ok(result);
+    }
+
+    private Map<String, Object> buildResult(final boolean useAtomicSolution, final int successCount, final int failCount, final long duration, final boolean completed) {
+        final Map<String, Object> result = new HashMap<>();
+        final int overbooking = successCount - demoService.getMaxParticipants();
+
+        if (useAtomicSolution) {
+            result.put(TYPE_KEY, "ATOMIC SOLUTION (FIX)");
+            result.put(EXPECTED_RESULT_KEY, "Should be exactly " + demoService.getMaxParticipants() + " bookings (no overbooking)");
+        } else {
+            result.put(TYPE_KEY, "RACE CONDITION (PROBLEM)");
+            result.put(EXPECTED_RESULT_KEY, "Should be > " + demoService.getMaxParticipants() + " bookings (overbooking)");
+        }
+
+        result.put(SESSION_ID_KEY, DEMO_SESSION_ID);
+        result.put(TOTAL_ATTEMPTS_KEY, THREAD_COUNT);
+        result.put(MAX_PARTICIPANTS_KEY, demoService.getMaxParticipants());
+        result.put(SUCCESSFUL_BOOKINGS_KEY, successCount);
+        result.put(FAILED_BOOKINGS_KEY, failCount);
+        result.put(OVERBOOKING_KEY, overbooking);
+        result.put(DURATION_MS_KEY, duration);
+        result.put("completed", completed);
+
+        return result;
     }
 
     private boolean awaitLatch(final CountDownLatch latch, final ExecutorService executor) {
