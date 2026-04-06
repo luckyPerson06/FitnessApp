@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.univ.grain.entities.Visit;
+import ru.univ.grain.entities.VisitStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,4 +34,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
 
     @Query("SELECT v FROM Visit v WHERE v.workoutSession.id = :sessionId AND v.status = 'BOOKED'")
     List<Visit> findBookedVisitsBySession(@Param("sessionId") Long sessionId);
+
+    long countByWorkoutSessionIdAndStatus(Long sessionId, VisitStatus status);
+
 }

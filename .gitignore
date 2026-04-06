@@ -49,3 +49,11 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+### Logs ###
+logs/
+*.log
+*.log.gz
+*.log.zip
+log/
+*.log.*

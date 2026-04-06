@@ -240,10 +240,7 @@ public class WorkoutSessionService {
 
     @Transactional(readOnly = true)
     public long getBookedCount(final Long sessionId) {
-        final LocalDateTime now = LocalDateTime.now();
-        return visitRepository.findByWorkoutSessionId(sessionId).stream()
-                .filter(v -> v.getVisitTime().isAfter(now) && v.getStatus() == VisitStatus.BOOKED)
-                .count();
+        return visitRepository.countByWorkoutSessionIdAndStatus(sessionId, VisitStatus.BOOKED);
     }
 
     @Transactional(readOnly = true)
@@ -377,7 +374,7 @@ public class WorkoutSessionService {
         return created;
     }
 
-    private WorkoutSessionDto validateAndCreateSession(WorkoutSessionDto dto) {
+    public WorkoutSessionDto validateAndCreateSession(WorkoutSessionDto dto) {
 
         if (dto.getStartTime().isAfter(dto.getEndTime())) {
             throw new BusinessException(INVALID_TIME_RANGE);

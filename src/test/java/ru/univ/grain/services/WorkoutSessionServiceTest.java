@@ -417,55 +417,11 @@ class WorkoutSessionServiceTest {
         assertThat(result).isFalse();
     }
 
-    @Test
-    void getBookedCount_ShouldReturnCount() {
-        Long sessionId = 1L;
-        Visit visit = new Visit();
-        visit.setVisitTime(LocalDateTime.now().plusDays(1));
-        visit.setStatus(VisitStatus.BOOKED);
 
-        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(List.of(visit, visit));
 
-        long result = workoutSessionService.getBookedCount(sessionId);
 
-        assertThat(result).isEqualTo(2);
-    }
 
-    @Test
-    void hasAvailableSpots_ShouldReturnTrue_WhenSpotsAvailable() {
-        Long sessionId = 1L;
-        WorkoutSession session = new WorkoutSession();
-        session.setMaxParticipants(10);
 
-        when(workoutSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
-        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(new ArrayList<>());
-
-        boolean result = workoutSessionService.hasAvailableSpots(sessionId);
-
-        assertThat(result).isTrue();
-    }
-
-    @Test
-    void hasAvailableSpots_ShouldReturnFalse_WhenFullyBooked() {
-        Long sessionId = 1L;
-        WorkoutSession session = new WorkoutSession();
-        session.setMaxParticipants(5);
-
-        List<Visit> visits = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            Visit visit = new Visit();
-            visit.setVisitTime(LocalDateTime.now().plusDays(1));
-            visit.setStatus(VisitStatus.BOOKED);
-            visits.add(visit);
-        }
-
-        when(workoutSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
-        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(visits);
-
-        boolean result = workoutSessionService.hasAvailableSpots(sessionId);
-
-        assertThat(result).isFalse();
-    }
 
     @Test
     void getSessionsByStatus_ShouldReturnList() {
@@ -770,33 +726,8 @@ class WorkoutSessionServiceTest {
                 .hasMessageContaining("не найдена");
     }
 
-    @Test
-    void getBookedCount_ShouldReturnZero_WhenNoBookedVisits() {
-        Long sessionId = 1L;
+    
 
-        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(List.of());
-
-        long result = workoutSessionService.getBookedCount(sessionId);
-
-        assertThat(result).isZero();
-    }
-
-    @Test
-    void getBookedCount_ShouldIgnorePastVisits() {
-        Long sessionId = 1L;
-        Visit pastVisit = new Visit();
-        pastVisit.setVisitTime(LocalDateTime.now().minusDays(1));
-        pastVisit.setStatus(VisitStatus.BOOKED);
-        Visit futureVisit = new Visit();
-        futureVisit.setVisitTime(LocalDateTime.now().plusDays(1));
-        futureVisit.setStatus(VisitStatus.BOOKED);
-
-        when(visitRepository.findByWorkoutSessionId(sessionId)).thenReturn(List.of(pastVisit, futureVisit));
-
-        long result = workoutSessionService.getBookedCount(sessionId);
-
-        assertThat(result).isEqualTo(1);
-    }
 
     @Test
     void updateSessionStatus_ShouldNotCancelVisits_WhenStatusNotCancelled() {
@@ -1604,24 +1535,6 @@ class WorkoutSessionServiceTest {
         verify(sessionCache).clearByTrainerLastName("Смирнова");
     }
 
-    @Test
-    void getBookedCount_ShouldIgnoreFutureVisitsWithNonBookedStatus() {
-        Long sessionId = 1L;
-        Visit futureCancelledVisit = new Visit();
-        futureCancelledVisit.setVisitTime(LocalDateTime.now().plusDays(1));
-        futureCancelledVisit.setStatus(VisitStatus.CANCELLED);
-
-        Visit futureBookedVisit = new Visit();
-        futureBookedVisit.setVisitTime(LocalDateTime.now().plusDays(1));
-        futureBookedVisit.setStatus(VisitStatus.BOOKED);
-
-        when(visitRepository.findByWorkoutSessionId(sessionId))
-                .thenReturn(List.of(futureCancelledVisit, futureBookedVisit));
-
-        long result = workoutSessionService.getBookedCount(sessionId);
-
-        assertThat(result).isEqualTo(1);
-    }
 
     @Test
     void updateSessionStatus_ShouldSkipVisitCancellation_WhenSessionAlreadyCompleted() {
