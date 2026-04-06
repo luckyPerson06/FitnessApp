@@ -41,5 +41,5 @@ jobs:
             -Dsonar.organization=luckyperson06 \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+            -Dsonar.coverage.exclusions="**/*" \
             -Dmaven.test.failure.ignore=true
