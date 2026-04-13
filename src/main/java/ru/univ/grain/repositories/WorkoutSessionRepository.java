@@ -1,7 +1,5 @@
 package ru.univ.grain.repositories;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +8,7 @@ import ru.univ.grain.entities.WorkoutSession;
 import ru.univ.grain.entities.WorkoutSessionStatus;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -26,6 +25,17 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     List<WorkoutSession> findByDayOfWeekAndStatus(DayOfWeek dayOfWeek, WorkoutSessionStatus status);
 
+    List<WorkoutSession> findBySessionDate(LocalDate sessionDate);
+
+    List<WorkoutSession> findBySessionDateBetween(LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT ws FROM WorkoutSession ws WHERE " +
+            "(ws.isRecurring = true AND ws.dayOfWeek = :dayOfWeek AND " +
+            "(ws.recurringUntil IS NULL OR ws.recurringUntil >= :date)) " +
+            "OR (ws.isRecurring = false AND ws.sessionDate = :date)")
+    List<WorkoutSession> findSessionsForDate(@Param("date") LocalDate date,
+                                             @Param("dayOfWeek") DayOfWeek dayOfWeek);
+
     @Query("SELECT s FROM WorkoutSession s WHERE s.trainer.id = :trainerId " +
             "AND s.dayOfWeek = :dayOfWeek " +
             "AND s.status IN ('SCHEDULED', 'CONFIRMED') " +
@@ -38,34 +48,8 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     @Query("SELECT s FROM WorkoutSession s WHERE s.dayOfWeek = :dayOfWeek " +
             "AND s.startTime <= :time AND s.endTime >= :time")
-    List<WorkoutSession> findByTime(@Param("dayOfWeek") DayOfWeek dayOfWeek, @Param("time") LocalTime time);
-
-    @Query("SELECT s FROM WorkoutSession s WHERE s.status = 'SCHEDULED' ORDER BY s.dayOfWeek, s.startTime")
-    List<WorkoutSession> findAllScheduled();
-
-    @Query("SELECT ws FROM WorkoutSession ws " +
-            "WHERE LOWER(ws.trainer.lastName) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
-            "AND ws.dayOfWeek = :dayOfWeek")
-    Page<WorkoutSession> findByTrainerLastNameAndDay(
-            @Param("trainerLastName") String trainerLastName,
-            @Param("dayOfWeek") DayOfWeek dayOfWeek,
-            Pageable pageable
-    );
-
-    @Query(value = "SELECT ws.* FROM workout_sessions ws " +
-            "JOIN trainers t ON ws.trainer_id = t.id " +
-            "WHERE LOWER(t.last_name) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
-            "AND ws.day_of_week = :dayOfWeek",
-            countQuery = "SELECT COUNT(*) FROM workout_sessions ws " +
-                    "JOIN trainers t ON ws.trainer_id = t.id " +
-                    "WHERE LOWER(t.last_name) LIKE LOWER(CONCAT('%', :trainerLastName, '%')) " +
-                    "AND ws.day_of_week = :dayOfWeek",
-            nativeQuery = true)
-    Page<WorkoutSession> findByTrainerLastNameAndDayNative(
-            @Param("trainerLastName") String trainerLastName,
-            @Param("dayOfWeek") String dayOfWeek,
-            Pageable pageable
-    );
+    List<WorkoutSession> findByTime(@Param("dayOfWeek") DayOfWeek dayOfWeek,
+                                    @Param("time") LocalTime time);
 
     @Query("SELECT ws FROM WorkoutSession ws " +
             "WHERE ws.trainer.id = :trainerId " +
@@ -75,7 +59,5 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             @Param("trainerId") Long trainerId,
             @Param("dayOfWeek") DayOfWeek dayOfWeek,
             @Param("start") LocalTime start,
-            @Param("end") LocalTime end
-    );
-
+            @Param("end") LocalTime end);
 }

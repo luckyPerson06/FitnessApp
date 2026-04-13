@@ -1,16 +1,22 @@
 package ru.univ.grain.services;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.univ.grain.entities.*;
+import ru.univ.grain.cache.AppCache;
+import ru.univ.grain.cache.CacheKey;
+import ru.univ.grain.cache.CacheRegion;
+import ru.univ.grain.dto.SubscriptionDto;
+import ru.univ.grain.entities.Subscription;
+import ru.univ.grain.entities.SubscriptionStatus;
+import ru.univ.grain.entities.SubscriptionType;
+import ru.univ.grain.entities.WorkoutType;
+import ru.univ.grain.exception.DuplicateResourceException;
+import ru.univ.grain.exception.ResourceNotFoundException;
+import ru.univ.grain.mapper.SubscriptionMapper;
 import ru.univ.grain.repositories.SubscriptionRepository;
 import ru.univ.grain.repositories.VisitRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
-import ru.univ.grain.dto.SubscriptionDto;
-import ru.univ.grain.mapper.SubscriptionMapper;
-import ru.univ.grain.exception.*;
 
 import java.util.List;
 
@@ -20,29 +26,29 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final WorkoutTypeRepository workoutTypeRepository;
-    private final SubscriptionMapper subscriptionMapper;
     private final VisitRepository visitRepository;
-
-    private SubscriptionService self;
-
-
-    @PostConstruct
-    public void init() {
-        this.self = this;
-    }
-
-
+    private final SubscriptionMapper subscriptionMapper;
+    private final AppCache appCache;
 
     private static final String SUBSCRIPTION_NOT_FOUND = "Абонемент с id %d не найден";
     private static final String SUBSCRIPTION_NAME_EXISTS = "Абонемент с названием '%s' уже существует";
     private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
-    private static final String INVALID_SUBSCRIPTION = "Некорректные параметры абонемента";
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getAllSubscriptions() {
-        return subscriptionRepository.findAll().stream()
+        final CacheKey key = CacheKey.forSubscriptions();
+
+        final List<SubscriptionDto> cached = appCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        final List<SubscriptionDto> result = subscriptionRepository.findAll().stream()
                 .map(subscriptionMapper::toDto)
                 .toList();
+
+        appCache.put(key, result);
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -53,6 +59,48 @@ public class SubscriptionService {
         return subscriptionMapper.toDto(subscription);
     }
 
+    @Transactional(readOnly = true)
+    public SubscriptionDto getSubscriptionByName(final String name) {
+        final Subscription subscription = subscriptionRepository.findByName(name)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Абонемент с названием '" + name + "' не найден"));
+        return subscriptionMapper.toDto(subscription);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getSubscriptionsByType(final SubscriptionType type) {
+        return subscriptionRepository.findBySubscriptionType(type).stream()
+                .map(subscriptionMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getSubscriptionsByStatus(final SubscriptionStatus status) {
+        return subscriptionRepository.findByStatus(status).stream()
+                .map(subscriptionMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getActiveSubscriptions() {
+        return getSubscriptionsByStatus(SubscriptionStatus.ACTIVE);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getExpiredSubscriptions() {
+        return getSubscriptionsByStatus(SubscriptionStatus.EXPIRED);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getCancelledSubscriptions() {
+        return getSubscriptionsByStatus(SubscriptionStatus.CANCELLED);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> getUsedSubscriptions() {
+        return getSubscriptionsByStatus(SubscriptionStatus.USED);
+    }
+
     @Transactional
     public SubscriptionDto createSubscription(final SubscriptionDto dto) {
         subscriptionRepository.findByName(dto.getName())
@@ -61,10 +109,10 @@ public class SubscriptionService {
                             String.format(SUBSCRIPTION_NAME_EXISTS, dto.getName()));
                 });
 
-        
-
         final Subscription subscription = subscriptionMapper.toEntity(dto);
         final Subscription saved = subscriptionRepository.save(subscription);
+
+        appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
         return subscriptionMapper.toDto(saved);
     }
 
@@ -82,25 +130,21 @@ public class SubscriptionService {
                     });
         }
 
-
         subscriptionMapper.updateEntity(dto, existing);
         final Subscription updated = subscriptionRepository.save(existing);
+
+        appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
         return subscriptionMapper.toDto(updated);
     }
 
     @Transactional
-    public void deleteSubscription(Long id) {
+    public void deleteSubscription(final Long id) {
         final Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(SUBSCRIPTION_NOT_FOUND, id)));
 
-        final List<Visit> visits = visitRepository.findBySubscriptionId(id);
-
-        for (Visit visit : visits) {
-            visit.setSubscription(null);
-        }
-
         subscriptionRepository.delete(subscription);
+        appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
     }
 
     @Transactional
@@ -111,6 +155,7 @@ public class SubscriptionService {
 
         subscription.setStatus(SubscriptionStatus.EXPIRED);
         subscriptionRepository.save(subscription);
+        appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
     }
 
     @Transactional
@@ -126,6 +171,7 @@ public class SubscriptionService {
         if (!subscription.getAllowedWorkoutTypes().contains(workoutType)) {
             subscription.getAllowedWorkoutTypes().add(workoutType);
             subscriptionRepository.save(subscription);
+            appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
         }
     }
 
@@ -144,56 +190,6 @@ public class SubscriptionService {
         }
 
         subscriptionRepository.save(subscription);
+        appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
     }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getSubscriptionsByType(final SubscriptionType type) {
-        return subscriptionRepository.findBySubscriptionType(type).stream()
-                .map(subscriptionMapper::toDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getSubscriptionsByWorkoutType(final Long workoutTypeId) {
-        return subscriptionRepository.findByAllowedWorkoutTypeId(workoutTypeId).stream()
-                .map(subscriptionMapper::toDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getSubscriptionsByStatus(final SubscriptionStatus status) {
-        return subscriptionRepository.findByStatus(status).stream()
-                .map(subscriptionMapper::toDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getActiveSubscriptions() {
-        return self.getSubscriptionsByStatus(SubscriptionStatus.ACTIVE);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getExpiredSubscriptions() {
-        return self.getSubscriptionsByStatus(SubscriptionStatus.EXPIRED);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getCancelledSubscriptions() {
-        return self.getSubscriptionsByStatus(SubscriptionStatus.CANCELLED);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubscriptionDto> getUsedSubscriptions() {
-        return self.getSubscriptionsByStatus(SubscriptionStatus.USED);
-    }
-
-    @Transactional(readOnly = true)
-    public SubscriptionDto getSubscriptionByName(final String name) {
-        return subscriptionRepository.findByName(name)
-                .map(subscriptionMapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Абонемент с названием '" + name + "' не найден"));
-    }
-
-
 }

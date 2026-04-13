@@ -17,17 +17,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
 
     List<Visit> findByWorkoutSessionId(Long workoutSessionId);
 
-    List<Visit> findBySubscriptionId(Long subscriptionId);
-
     List<Visit> findByVisitTimeBetween(LocalDateTime start, LocalDateTime end);
-
-    @Query("SELECT COUNT(v) FROM Visit v WHERE v.subscription.id = :subscriptionId AND v.status = 'ATTENDED'")
-    long countAttendedBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
-
-    @Query("SELECT HOUR(v.visitTime), COUNT(v) FROM Visit v " +
-            "WHERE v.status = 'ATTENDED' " +
-            "GROUP BY HOUR(v.visitTime)")
-    List<Object[]> getVisitsByHour();
 
     @Query("SELECT v FROM Visit v WHERE v.client.id = :clientId AND v.status = 'BOOKED'")
     List<Visit> findBookedVisitsByClient(@Param("clientId") Long clientId);
@@ -36,5 +26,4 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     List<Visit> findBookedVisitsBySession(@Param("sessionId") Long sessionId);
 
     long countByWorkoutSessionIdAndStatus(Long sessionId, VisitStatus status);
-
 }

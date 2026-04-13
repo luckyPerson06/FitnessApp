@@ -8,8 +8,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import ru.univ.grain.cache.SessionCache;
-import ru.univ.grain.cache.SessionSearchKey;
 import ru.univ.grain.dto.WorkoutSessionDto;
 import ru.univ.grain.entities.*;
 import ru.univ.grain.exception.BusinessException;

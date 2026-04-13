@@ -12,9 +12,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ru.univ.grain.dto.ApiError;
 import ru.univ.grain.dto.VisitDto;
+import ru.univ.grain.entities.Client;
+import ru.univ.grain.entities.User;
+import ru.univ.grain.exception.ResourceNotFoundException;
+import ru.univ.grain.repositories.ClientRepository;
 import ru.univ.grain.services.VisitService;
 
 import java.time.LocalDate;
@@ -27,9 +33,11 @@ import java.util.List;
 public class VisitController {
 
     private final VisitService visitService;
+    private final ClientRepository clientRepository;
 
     @Operation(summary = "Получить все посещения")
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<VisitDto>> getAllVisits() {
         return ResponseEntity.ok(visitService.getAllVisits());
     }
@@ -37,129 +45,146 @@ public class VisitController {
     @Operation(summary = "Получить посещение по ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Посещение найдено"),
-            @ApiResponse(responseCode = "404", description = "Посещение не найдено", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "404", description = "Посещение не найден",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<VisitDto> getVisitById(@Parameter(description = "ID посещения", example = "1") @PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VisitDto> getVisitById(
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id) {
         return ResponseEntity.ok(visitService.getVisitById(id));
     }
 
     @Operation(summary = "Получить все посещения клиента")
     @GetMapping("/client/{clientId}")
-    public ResponseEntity<List<VisitDto>> getClientVisits(@Parameter(description = "ID клиента", example = "1") @PathVariable Long clientId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<VisitDto>> getClientVisits(
+            @Parameter(description = "ID клиента", example = "1") @PathVariable final Long clientId) {
         return ResponseEntity.ok(visitService.getClientVisits(clientId));
     }
 
     @Operation(summary = "Получить предстоящие посещения клиента")
     @GetMapping("/client/{clientId}/upcoming")
-    public ResponseEntity<List<VisitDto>> getClientUpcomingVisits(@Parameter(description = "ID клиента", example = "1") @PathVariable Long clientId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<VisitDto>> getClientUpcomingVisits(
+            @Parameter(description = "ID клиента", example = "1") @PathVariable final Long clientId) {
         return ResponseEntity.ok(visitService.getClientUpcomingVisits(clientId));
     }
 
     @Operation(summary = "Получить историю посещений клиента за период")
     @GetMapping("/client/{clientId}/history")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<VisitDto>> getClientHistory(
-            @Parameter(description = "ID клиента", example = "1") @PathVariable Long clientId,
-            @Parameter(description = "Дата начала", example = "2026-03-01") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @Parameter(description = "Дата окончания", example = "2026-03-31") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @Parameter(description = "ID клиента", example = "1") @PathVariable final Long clientId,
+            @Parameter(description = "Дата начала", example = "2026-03-01") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
+            @Parameter(description = "Дата окончания", example = "2026-03-31") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
         return ResponseEntity.ok(visitService.getClientHistory(clientId, from, to));
     }
 
     @Operation(summary = "Получить количество посещений клиента за период")
     @GetMapping("/client/{clientId}/count")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Long> getClientVisitsCount(
-            @Parameter(description = "ID клиента", example = "1") @PathVariable Long clientId,
-            @Parameter(description = "Дата начала", example = "2026-03-01") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @Parameter(description = "Дата окончания", example = "2026-03-31") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @Parameter(description = "ID клиента", example = "1") @PathVariable final Long clientId,
+            @Parameter(description = "Дата начала", example = "2026-03-01") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
+            @Parameter(description = "Дата окончания", example = "2026-03-31") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to) {
         return ResponseEntity.ok(visitService.getClientVisitsCount(clientId, from, to));
     }
 
     @Operation(summary = "Получить посещения по тренировке")
     @GetMapping("/session/{sessionId}")
-    public ResponseEntity<List<VisitDto>> getScheduleVisits(@Parameter(description = "ID тренировки", example = "1") @PathVariable Long sessionId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<VisitDto>> getScheduleVisits(
+            @Parameter(description = "ID тренировки", example = "1") @PathVariable final Long sessionId) {
         return ResponseEntity.ok(visitService.getScheduleVisits(sessionId));
     }
 
     @Operation(summary = "Получить сегодняшние посещения")
     @GetMapping("/today")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<VisitDto>> getTodayVisits() {
         return ResponseEntity.ok(visitService.getTodayVisits());
-    }
-
-    @Operation(summary = "Получить количество использованных посещений по абонементу")
-    @GetMapping("/subscription/{subscriptionId}/used")
-    public ResponseEntity<Long> getSubscriptionUsedVisits(@Parameter(description = "ID абонемента", example = "1") @PathVariable Long subscriptionId) {
-        return ResponseEntity.ok(visitService.getSubscriptionUsedVisits(subscriptionId));
-    }
-
-    @Operation(summary = "Получить статистику посещений по часам")
-    @GetMapping("/stats/hourly")
-    public ResponseEntity<List<Object[]>> getVisitsByHourStats() {
-        return ResponseEntity.ok(visitService.getVisitsByHourStats());
     }
 
     @Operation(summary = "Создать новое посещение")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Посещение создано"),
-            @ApiResponse(responseCode = "400", description = "Ошибка валидации", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации")
     })
     @PostMapping
-    public ResponseEntity<VisitDto> createVisit(@Valid @RequestBody VisitDto dto) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VisitDto> createVisit(@Valid @RequestBody final VisitDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(visitService.createVisit(dto));
-    }
-
-    @Operation(summary = "Записаться на тренировку")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Успешная запись"),
-            @ApiResponse(responseCode = "400", description = "Ошибка: нет мест, уже записан, абонемент не подходит", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Клиент, тренировка или абонемент не найдены", content = @Content(schema = @Schema(implementation = ApiError.class)))
-    })
-    @PostMapping("/book")
-    public ResponseEntity<VisitDto> bookWorkout(
-            @Parameter(description = "ID клиента", example = "1") @RequestParam Long clientId,
-            @Parameter(description = "ID тренировки", example = "1") @RequestParam Long sessionId,
-            @Parameter(description = "ID абонемента", example = "1") @RequestParam Long subscriptionId) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(visitService.bookWorkout(clientId, sessionId, subscriptionId));
     }
 
     @Operation(summary = "Обновить посещение")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VisitDto> updateVisit(
-            @Parameter(description = "ID посещения", example = "1") @PathVariable Long id,
-            @Valid @RequestBody VisitDto dto) {
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id,
+            @Valid @RequestBody final VisitDto dto) {
         return ResponseEntity.ok(visitService.updateVisit(id, dto));
     }
 
     @Operation(summary = "Частичное обновление посещения")
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VisitDto> patchVisit(
-            @Parameter(description = "ID посещения", example = "1") @PathVariable Long id,
-            @Valid @RequestBody VisitDto dto) {
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id,
+            @Valid @RequestBody final VisitDto dto) {
         return ResponseEntity.ok(visitService.updateVisit(id, dto));
     }
 
     @Operation(summary = "Отметить посещение (пришёл/не пришёл)")
     @PatchMapping("/{id}/attendance")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VisitDto> markAttendance(
-            @Parameter(description = "ID посещения", example = "1") @PathVariable Long id,
-            @Parameter(description = "Пришёл ли клиент", example = "true") @RequestParam boolean attended) {
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id,
+            @Parameter(description = "Пришёл ли клиент", example = "true") @RequestParam final boolean attended) {
         return ResponseEntity.ok(visitService.markAttendance(id, attended));
-    }
-
-    @Operation(summary = "Отменить запись на тренировку")
-    @PatchMapping("/{id}/cancel")
-    public ResponseEntity<VisitDto> cancelBooking(@Parameter(description = "ID посещения", example = "1") @PathVariable Long id) {
-        return ResponseEntity.ok(visitService.cancelBooking(id));
     }
 
     @Operation(summary = "Удалить посещение")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Посещение удалено"),
-            @ApiResponse(responseCode = "404", description = "Посещение не найдено", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "404", description = "Посещение не найдено")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVisit(@Parameter(description = "ID посещения", example = "1") @PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteVisit(
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id) {
         visitService.deleteVisit(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Записаться на тренировку")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Успешная запись"),
+            @ApiResponse(responseCode = "400", description = "Ошибка: нет мест, уже записан, абонемент не подходит"),
+            @ApiResponse(responseCode = "404", description = "Клиент, тренировка или абонемент не найдены")
+    })
+    @PostMapping("/book")
+    public ResponseEntity<VisitDto> bookWorkout(
+            @AuthenticationPrincipal final User user,
+            @Parameter(description = "ID тренировки", example = "1") @RequestParam final Long sessionId,
+            @Parameter(description = "ID абонемента", example = "1") @RequestParam final Long subscriptionId) {
+        final Client client = clientRepository.findByEmail(user.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Клиент не найден"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(visitService.bookWorkout(client.getId(), sessionId, subscriptionId));
+    }
+
+    @Operation(summary = "Отменить запись на тренировку")
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<VisitDto> cancelBooking(
+            @AuthenticationPrincipal final User user,
+            @Parameter(description = "ID посещения", example = "1") @PathVariable final Long id) {
+        final Client client = clientRepository.findByEmail(user.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Клиент не найден"));
+        final VisitDto visit = visitService.getVisitById(id);
+        if (!visit.getClientId().equals(client.getId())) {
+            throw new ResourceNotFoundException("Запись не найдена или не принадлежит вам");
+        }
+        return ResponseEntity.ok(visitService.cancelBooking(id));
     }
 }

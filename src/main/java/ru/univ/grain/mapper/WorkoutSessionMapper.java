@@ -11,6 +11,7 @@ public interface WorkoutSessionMapper {
     @Mapping(target = "trainer", ignore = true)
     @Mapping(target = "workoutType", ignore = true)
     @Mapping(target = "visits", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "status", constant = "SCHEDULED")
     WorkoutSession toEntity(WorkoutSessionDto dto);
 
@@ -18,11 +19,11 @@ public interface WorkoutSessionMapper {
     @Mapping(target = "workoutTypeId", source = "workoutType.id")
     WorkoutSessionDto toDto(WorkoutSession session);
 
-    @BeanMapping(nullValuePropertyMappingStrategy =
-            NullValuePropertyMappingStrategy.IGNORE)
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "trainer", ignore = true)
     @Mapping(target = "workoutType", ignore = true)
     @Mapping(target = "visits", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void updateEntity(WorkoutSessionDto dto, @MappingTarget WorkoutSession session);
 }

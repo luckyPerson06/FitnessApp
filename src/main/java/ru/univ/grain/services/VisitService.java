@@ -3,14 +3,15 @@ package ru.univ.grain.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.univ.grain.dto.VisitDto;
 import ru.univ.grain.entities.*;
+import ru.univ.grain.exception.BusinessException;
+import ru.univ.grain.exception.ResourceNotFoundException;
+import ru.univ.grain.mapper.VisitMapper;
 import ru.univ.grain.repositories.ClientRepository;
-import ru.univ.grain.repositories.WorkoutSessionRepository;
 import ru.univ.grain.repositories.SubscriptionRepository;
 import ru.univ.grain.repositories.VisitRepository;
-import ru.univ.grain.dto.VisitDto;
-import ru.univ.grain.mapper.VisitMapper;
-import ru.univ.grain.exception.*;
+import ru.univ.grain.repositories.WorkoutSessionRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +36,13 @@ public class VisitService {
     private static final String ALREADY_BOOKED = "Вы уже записаны на эту тренировку";
     private static final String NO_AVAILABLE_SPOTS = "Нет свободных мест на тренировке";
     private static final String INVALID_VISIT_STATUS = "Неверный статус визита для выполнения операции";
+
+    public record AttendanceStats(
+            int totalBooked,
+            int attended,
+            int noShow,
+            double attendanceRate
+    ) { }
 
     private record VisitComponents(Client client, WorkoutSession session, Subscription subscription) { }
 
@@ -178,7 +186,6 @@ public class VisitService {
         }
 
         visit.setStatus(VisitStatus.CANCELLED);
-
         final Visit updated = visitRepository.save(visit);
         return visitMapper.toDto(updated);
     }
@@ -209,8 +216,8 @@ public class VisitService {
     }
 
     @Transactional(readOnly = true)
-    public List<VisitDto> getScheduleVisits(final Long scheduleId) {
-        return visitRepository.findByWorkoutSessionId(scheduleId).stream()
+    public List<VisitDto> getScheduleVisits(final Long sessionId) {
+        return visitRepository.findByWorkoutSessionId(sessionId).stream()
                 .map(visitMapper::toDto)
                 .toList();
     }
@@ -235,12 +242,34 @@ public class VisitService {
     }
 
     @Transactional(readOnly = true)
-    public long getSubscriptionUsedVisits(final Long subscriptionId) {
-        return visitRepository.countAttendedBySubscriptionId(subscriptionId);
+    public List<VisitDto> getVisitsByDate(final LocalDate date) {
+        final LocalDateTime start = date.atStartOfDay();
+        final LocalDateTime end = date.atTime(23, 59, 59);
+        return visitRepository.findByVisitTimeBetween(start, end).stream()
+                .map(visitMapper::toDto)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Object[]> getVisitsByHourStats() {
-        return visitRepository.getVisitsByHour();
+    public AttendanceStats getAttendanceStats(final Long sessionId) {
+        final List<Visit> visits = visitRepository.findByWorkoutSessionId(sessionId);
+
+        final int totalBooked = (int) visits.stream()
+                .filter(v -> v.getStatus() != VisitStatus.CANCELLED)
+                .count();
+
+        final int attended = (int) visits.stream()
+                .filter(v -> v.getStatus() == VisitStatus.ATTENDED || v.getStatus() == VisitStatus.COMPLETED)
+                .count();
+
+        final int noShow = (int) visits.stream()
+                .filter(v -> v.getStatus() == VisitStatus.NO_SHOW)
+                .count();
+
+        final double attendanceRate = totalBooked > 0
+                ? Math.round((attended * 100.0 / totalBooked) * 10.0) / 10.0
+                : 0.0;
+
+        return new AttendanceStats(totalBooked, attended, noShow, attendanceRate);
     }
 }

@@ -4,9 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import ru.univ.grain.entities.*;
+import ru.univ.grain.entities.WorkoutSessionStatus;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Getter
@@ -29,6 +30,9 @@ public class WorkoutSessionDto {
     @NotNull
     private DayOfWeek dayOfWeek;
 
+    @Schema(description = "Конкретная дата (для разовых тренировок)", example = "2026-04-14")
+    private LocalDate sessionDate;
+
     @Schema(description = "Время начала", example = "10:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Время начала обязательно")
     private LocalTime startTime;
@@ -47,4 +51,10 @@ public class WorkoutSessionDto {
 
     @Schema(description = "Цветовой код для календаря", example = "#FF5733")
     private String colorCode;
+
+    @Schema(description = "Повторяющаяся тренировка", example = "true")
+    private Boolean isRecurring = true;
+
+    @Schema(description = "Повторять до даты", example = "2026-06-30")
+    private LocalDate recurringUntil;
 }

@@ -23,16 +23,13 @@ public class ClientPatchDto {
     @Schema(description = "Фамилия клиента", example = "Иванов")
     private String lastName;
 
-    @Schema(description = "Номер телефона", example = "+79991234567", pattern = "^\\+?\\d{10,15}$")
+    @Schema(description = "Номер телефона", example = "+375291234567", pattern = "^\\+?\\d{10,15}$")
     @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Неверный формат телефона")
     private String phoneNumber;
 
     @Schema(description = "Email клиента", example = "ivan@mail.com")
     @Email(message = "Неверный формат email")
     private String email;
-
-    @Schema(description = "Пароль")
-    private String password;
 
     @Schema(description = "Статус клиента", example = "ACTIVE")
     private ClientStatus status;

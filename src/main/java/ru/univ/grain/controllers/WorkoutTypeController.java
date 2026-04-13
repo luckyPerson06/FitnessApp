@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.univ.grain.dto.ApiError;
 import ru.univ.grain.dto.WorkoutTypeDto;
@@ -36,16 +37,19 @@ public class WorkoutTypeController {
     @Operation(summary = "Получить тип тренировки по ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Тип тренировки найден"),
-            @ApiResponse(responseCode = "404", description = "Тип тренировки не найден", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "404", description = "Тип тренировки не найден",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeById(@Parameter(description = "ID типа тренировки", example = "1") @PathVariable Long id) {
+    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeById(
+            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable final Long id) {
         return ResponseEntity.ok(workoutTypeService.getWorkoutTypeById(id));
     }
 
     @Operation(summary = "Получить тип тренировки по названию")
     @GetMapping("/name/{name}")
-    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeByName(@Parameter(description = "Название типа тренировки", example = "Йога") @PathVariable String name) {
+    public ResponseEntity<WorkoutTypeDto> getWorkoutTypeByName(
+            @Parameter(description = "Название типа тренировки", example = "Йога") @PathVariable final String name) {
         return ResponseEntity.ok(workoutTypeService.getWorkoutTypeByName(name));
     }
 
@@ -57,52 +61,53 @@ public class WorkoutTypeController {
 
     @Operation(summary = "Получить типы тренировок по категории")
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByCategory(@Parameter(description = "Категория", example = "GROUP") @PathVariable WorkoutCategory category) {
+    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByCategory(
+            @Parameter(description = "Категория", example = "GROUP") @PathVariable final WorkoutCategory category) {
         return ResponseEntity.ok(workoutTypeService.getWorkoutTypesByCategory(category));
     }
 
     @Operation(summary = "Получить типы тренировок тренера")
     @GetMapping("/trainer/{trainerId}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByTrainer(@Parameter(description = "ID тренера", example = "1") @PathVariable Long trainerId) {
+    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByTrainer(
+            @Parameter(description = "ID тренера", example = "1") @PathVariable final Long trainerId) {
         return ResponseEntity.ok(workoutTypeService.getWorkoutTypesByTrainer(trainerId));
-    }
-
-    @Operation(summary = "Получить типы тренировок, доступные по абонементу")
-    @GetMapping("/subscription/{subscriptionId}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesBySubscription(@Parameter(description = "ID абонемента", example = "1") @PathVariable Long subscriptionId) {
-        return ResponseEntity.ok(workoutTypeService.getWorkoutTypesBySubscription(subscriptionId));
     }
 
     @Operation(summary = "Создать новый тип тренировки")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Тип тренировки создан"),
-            @ApiResponse(responseCode = "400", description = "Ошибка валидации", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "Тип тренировки с таким названием уже существует", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации"),
+            @ApiResponse(responseCode = "409", description = "Тип тренировки с таким названием уже существует")
     })
     @PostMapping
-    public ResponseEntity<WorkoutTypeDto> createWorkoutType(@Valid @RequestBody WorkoutTypeDto dto) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutTypeDto> createWorkoutType(@Valid @RequestBody final WorkoutTypeDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(workoutTypeService.createWorkoutType(dto));
     }
 
     @Operation(summary = "Обновить тип тренировки")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<WorkoutTypeDto> updateWorkoutType(
-            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable Long id,
-            @Valid @RequestBody WorkoutTypeDto dto) {
+            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable final Long id,
+            @Valid @RequestBody final WorkoutTypeDto dto) {
         return ResponseEntity.ok(workoutTypeService.updateWorkoutType(id, dto));
     }
 
     @Operation(summary = "Частичное обновление типа тренировки")
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<WorkoutTypeDto> patchWorkoutType(
-            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable Long id,
-            @Valid @RequestBody WorkoutTypeDto dto) {
+            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable final Long id,
+            @Valid @RequestBody final WorkoutTypeDto dto) {
         return ResponseEntity.ok(workoutTypeService.updateWorkoutType(id, dto));
     }
 
     @Operation(summary = "Деактивировать тип тренировки")
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<WorkoutTypeDto> deactivateWorkoutType(@Parameter(description = "ID типа тренировки", example = "1") @PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutTypeDto> deactivateWorkoutType(
+            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable final Long id) {
         workoutTypeService.deactivateWorkoutType(id);
         return ResponseEntity.ok(workoutTypeService.getWorkoutTypeById(id));
     }
@@ -110,18 +115,21 @@ public class WorkoutTypeController {
     @Operation(summary = "Удалить тип тренировки")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Тип тренировки удалён"),
-            @ApiResponse(responseCode = "404", description = "Тип тренировки не найден", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "400", description = "Невозможно удалить: есть связанные данные", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "404", description = "Тип тренировки не найден"),
+            @ApiResponse(responseCode = "400", description = "Невозможно удалить: есть связанные данные")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkoutType(@Parameter(description = "ID типа тренировки", example = "1") @PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteWorkoutType(
+            @Parameter(description = "ID типа тренировки", example = "1") @PathVariable final Long id) {
         workoutTypeService.deleteWorkoutType(id);
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Проверить существование типа тренировки по названию")
     @GetMapping("/exists/name/{name}")
-    public ResponseEntity<Boolean> existsByName(@Parameter(description = "Название типа тренировки", example = "Йога") @PathVariable String name) {
+    public ResponseEntity<Boolean> existsByName(
+            @Parameter(description = "Название типа тренировки", example = "Йога") @PathVariable final String name) {
         return ResponseEntity.ok(workoutTypeService.existsByName(name));
     }
 }

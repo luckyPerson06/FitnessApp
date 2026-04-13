@@ -10,7 +10,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.univ.grain.dto.WorkoutSessionDto;
-import ru.univ.grain.dto.WorkoutSessionBulkRequest;
 import ru.univ.grain.entities.WorkoutSessionStatus;
 import ru.univ.grain.exception.ResourceNotFoundException;
 import ru.univ.grain.services.WorkoutSessionService;

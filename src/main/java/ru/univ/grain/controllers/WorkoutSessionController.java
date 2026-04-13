@@ -13,9 +13,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.univ.grain.dto.ApiError;
-import ru.univ.grain.dto.WorkoutSessionBulkRequest;
 import ru.univ.grain.dto.WorkoutSessionDto;
 import ru.univ.grain.entities.WorkoutSessionStatus;
 import ru.univ.grain.services.WorkoutSessionService;
@@ -78,44 +78,12 @@ public class WorkoutSessionController {
         return ResponseEntity.ok(workoutSessionService.getTodaySessions());
     }
 
-    @Operation(summary = "Получить тренировки по статусу")
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByStatus(@Parameter(description = "Статус тренировки", example = "SCHEDULED") @PathVariable WorkoutSessionStatus status) {
-        return ResponseEntity.ok(workoutSessionService.getSessionsByStatus(status));
-    }
-
-    @Operation(summary = "Получить все запланированные тренировки")
-    @GetMapping("/scheduled")
-    public ResponseEntity<List<WorkoutSessionDto>> getAllScheduledSessions() {
-        return ResponseEntity.ok(workoutSessionService.getAllScheduledSessions());
-    }
-
     @Operation(summary = "Получить тренировки по времени")
     @GetMapping("/time")
     public ResponseEntity<List<WorkoutSessionDto>> getSessionsByTime(
             @Parameter(description = "День недели", example = "MONDAY") @RequestParam DayOfWeek dayOfWeek,
             @Parameter(description = "Время", example = "10:00:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime time) {
         return ResponseEntity.ok(workoutSessionService.getSessionsByTime(dayOfWeek, time));
-    }
-
-    @Operation(summary = "Проверить доступность тренера")
-    @GetMapping("/check-availability")
-    public ResponseEntity<Boolean> isTrainerAvailable(
-            @Parameter(description = "ID тренера", example = "1") @RequestParam Long trainerId,
-            @Parameter(description = "День недели", example = "MONDAY") @RequestParam DayOfWeek dayOfWeek,
-            @Parameter(description = "Время начала", example = "10:00:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
-            @Parameter(description = "Время окончания", example = "11:30:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
-        return ResponseEntity.ok(workoutSessionService.isTrainerAvailable(trainerId, dayOfWeek, start, end));
-    }
-
-    @Operation(summary = "Найти пересекающиеся тренировки")
-    @GetMapping("/overlapping")
-    public ResponseEntity<List<WorkoutSessionDto>> findOverlappingSessions(
-            @Parameter(description = "ID тренера", example = "1") @RequestParam Long trainerId,
-            @Parameter(description = "День недели", example = "MONDAY") @RequestParam DayOfWeek dayOfWeek,
-            @Parameter(description = "Время начала", example = "10:00:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
-            @Parameter(description = "Время окончания", example = "11:30:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
-        return ResponseEntity.ok(workoutSessionService.findOverlappingSessions(trainerId, dayOfWeek, start, end));
     }
 
     @Operation(summary = "Получить количество записанных на тренировку")
@@ -128,53 +96,6 @@ public class WorkoutSessionController {
     @GetMapping("/{sessionId}/available-spots")
     public ResponseEntity<Boolean> hasAvailableSpots(@Parameter(description = "ID тренировки", example = "1") @PathVariable Long sessionId) {
         return ResponseEntity.ok(workoutSessionService.hasAvailableSpots(sessionId));
-    }
-
-    @Operation(summary = "Создать новую тренировку")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Тренировка создана"),
-            @ApiResponse(responseCode = "400", description = "Ошибка валидации или пересечение расписания", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Тренер или тип тренировки не найдены", content = @Content(schema = @Schema(implementation = ApiError.class)))
-    })
-    @PostMapping
-    public ResponseEntity<WorkoutSessionDto> createSession(@Valid @RequestBody WorkoutSessionDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSessionService.createSession(dto));
-    }
-
-    @Operation(summary = "Обновить тренировку")
-    @PutMapping("/{id}")
-    public ResponseEntity<WorkoutSessionDto> updateSession(
-            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
-            @Valid @RequestBody WorkoutSessionDto dto) {
-        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
-    }
-
-    @Operation(summary = "Частичное обновление тренировки")
-    @PatchMapping("/{id}")
-    public ResponseEntity<WorkoutSessionDto> patchSession(
-            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
-            @Valid @RequestBody WorkoutSessionDto dto) {
-        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
-    }
-
-    @Operation(summary = "Обновить статус тренировки")
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<WorkoutSessionDto> updateSessionStatus(
-            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
-            @Parameter(description = "Новый статус", example = "CANCELLED") @RequestParam WorkoutSessionStatus status) {
-        return ResponseEntity.ok(workoutSessionService.updateSessionStatus(id, status));
-    }
-
-    @Operation(summary = "Удалить тренировку")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Тренировка удалена"),
-            @ApiResponse(responseCode = "404", description = "Тренировка не найдена", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "400", description = "Невозможно удалить: есть будущие записи", content = @Content(schema = @Schema(implementation = ApiError.class)))
-    })
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSession(@Parameter(description = "ID тренировки", example = "1") @PathVariable Long id) {
-        workoutSessionService.deleteSession(id);
-        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Поиск тренировок по фамилии тренера и дню (JPQL + пагинация)")
@@ -210,12 +131,101 @@ public class WorkoutSessionController {
                 trainerLastName, dayOfWeek, page, size));
     }
 
+    @Operation(summary = "Получить тренировки по статусу")
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<WorkoutSessionDto>> getSessionsByStatus(@Parameter(description = "Статус тренировки", example = "SCHEDULED") @PathVariable WorkoutSessionStatus status) {
+        return ResponseEntity.ok(workoutSessionService.getSessionsByStatus(status));
+    }
+
+    @Operation(summary = "Получить все запланированные тренировки")
+    @GetMapping("/scheduled")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<WorkoutSessionDto>> getAllScheduledSessions() {
+        return ResponseEntity.ok(workoutSessionService.getAllScheduledSessions());
+    }
+
+    @Operation(summary = "Проверить доступность тренера")
+    @GetMapping("/check-availability")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Boolean> isTrainerAvailable(
+            @Parameter(description = "ID тренера", example = "1") @RequestParam Long trainerId,
+            @Parameter(description = "День недели", example = "MONDAY") @RequestParam DayOfWeek dayOfWeek,
+            @Parameter(description = "Время начала", example = "10:00:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
+            @Parameter(description = "Время окончания", example = "11:30:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
+        return ResponseEntity.ok(workoutSessionService.isTrainerAvailable(trainerId, dayOfWeek, start, end));
+    }
+
+    @Operation(summary = "Найти пересекающиеся тренировки")
+    @GetMapping("/overlapping")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<WorkoutSessionDto>> findOverlappingSessions(
+            @Parameter(description = "ID тренера", example = "1") @RequestParam Long trainerId,
+            @Parameter(description = "День недели", example = "MONDAY") @RequestParam DayOfWeek dayOfWeek,
+            @Parameter(description = "Время начала", example = "10:00:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
+            @Parameter(description = "Время окончания", example = "11:30:00") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end) {
+        return ResponseEntity.ok(workoutSessionService.findOverlappingSessions(trainerId, dayOfWeek, start, end));
+    }
+
+    @Operation(summary = "Создать новую тренировку")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Тренировка создана"),
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации или пересечение расписания", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Тренер или тип тренировки не найдены", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutSessionDto> createSession(@Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSessionService.createSession(dto));
+    }
+
+    @Operation(summary = "Обновить тренировку")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutSessionDto> updateSession(
+            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
+            @Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
+    }
+
+    @Operation(summary = "Частичное обновление тренировки")
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutSessionDto> patchSession(
+            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
+            @Valid @RequestBody WorkoutSessionDto dto) {
+        return ResponseEntity.ok(workoutSessionService.updateSession(id, dto));
+    }
+
+    @Operation(summary = "Обновить статус тренировки")
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<WorkoutSessionDto> updateSessionStatus(
+            @Parameter(description = "ID тренировки", example = "1") @PathVariable Long id,
+            @Parameter(description = "Новый статус", example = "CANCELLED") @RequestParam WorkoutSessionStatus status) {
+        return ResponseEntity.ok(workoutSessionService.updateSessionStatus(id, status));
+    }
+
+    @Operation(summary = "Удалить тренировку")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Тренировка удалена"),
+            @ApiResponse(responseCode = "404", description = "Тренировка не найдена", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "400", description = "Невозможно удалить: есть будущие записи", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteSession(@Parameter(description = "ID тренировки", example = "1") @PathVariable Long id) {
+        workoutSessionService.deleteSession(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Массовое создание тренировок (с транзакцией)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Все тренировки созданы"),
             @ApiResponse(responseCode = "400", description = "Ошибка валидации или бизнес-правил", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/bulk/with-transaction")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<WorkoutSessionDto>> createSessionsBulkWithTransaction(
             @Valid @RequestBody WorkoutSessionBulkRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(workoutSessionService.createSessionsBulkWithTransaction(request.getSessions()));
@@ -226,6 +236,7 @@ public class WorkoutSessionController {
             @ApiResponse(responseCode = "400", description = "Ошибка валидации", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/bulk/without-transaction")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<WorkoutSessionDto>> createSessionsBulkWithoutTransaction(
             @Valid @RequestBody WorkoutSessionBulkRequest request) {
         final List<WorkoutSessionDto> result = workoutSessionService.createSessionsBulkWithoutTransaction(request.getSessions());

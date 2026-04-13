@@ -22,8 +22,5 @@ public interface WorkoutTypeRepository extends JpaRepository<WorkoutType, Long> 
     @Query("SELECT wt FROM WorkoutType wt JOIN wt.trainers t WHERE t.id = :trainerId")
     List<WorkoutType> findByTrainerId(@Param("trainerId") Long trainerId);
 
-    @Query("SELECT wt FROM WorkoutType wt JOIN wt.subscriptions s WHERE s.id = :subscriptionId")
-    List<WorkoutType> findBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
-
     boolean existsByNameIgnoreCase(String name);
 }

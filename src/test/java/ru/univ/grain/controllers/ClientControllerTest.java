@@ -10,7 +10,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.univ.grain.dto.ClientDto;
 import ru.univ.grain.dto.ClientPatchDto;
 import ru.univ.grain.dto.ClientResponseDto;
-import ru.univ.grain.dto.ClientWithSubscriptionRequest;
 import ru.univ.grain.dto.SubscriptionDto;
 import ru.univ.grain.entities.ClientStatus;
 import ru.univ.grain.entities.SubscriptionType;
