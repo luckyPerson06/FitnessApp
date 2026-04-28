@@ -21,7 +21,7 @@ import java.util.List;
                 @Index(name = "idx_session_day", columnList = "day_of_week"),
                 @Index(name = "idx_session_date", columnList = "session_date"),
                 @Index(name = "idx_session_status", columnList = "status"),
-                @Index(name = "idx_session_datetime", columnList = "day_of_week, start_time")
+                @Index(name = "idx_session_room", columnList = "room")
         })
 public class WorkoutSession {
 
@@ -65,6 +65,9 @@ public class WorkoutSession {
 
     @Column(name = "recurring_until")
     private LocalDate recurringUntil;
+
+    @Column(name = "room", length = 50)
+    private String room;
 
     @Builder.Default
     @OneToMany(mappedBy = "workoutSession", fetch = FetchType.LAZY,

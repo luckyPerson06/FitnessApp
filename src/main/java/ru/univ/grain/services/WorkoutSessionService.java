@@ -302,4 +302,16 @@ public class WorkoutSessionService {
             appCache.evictSessionsForTrainer(session.getTrainer().getId());
         }
     }
+
+    public List<WorkoutSessionDto> getUpcomingByWorkoutType(Long workoutTypeId) {
+        final LocalDate today = LocalDate.now();
+        return workoutSessionRepository
+                .findByWorkoutTypeIdAndSessionDateGreaterThanEqualOrderBySessionDateAscStartTimeAsc(
+                        workoutTypeId, today)
+                .stream()
+                .limit(5)
+                .map(workoutSessionMapper::toDto)
+                .toList();
+    }
+
 }

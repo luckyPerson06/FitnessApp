@@ -23,7 +23,8 @@ public class ClientDto {
     @NotBlank(message = "Фамилия обязательна")
     private String lastName;
 
-    @Schema(description = "Номер телефона", example = "+375291234567", pattern = "^\\+?\\d{10,15}$")
+    @Schema(description = "Номер телефона", example = "+375291234567", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "Телефон обязателен")
     @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Неверный формат телефона")
     private String phoneNumber;
 

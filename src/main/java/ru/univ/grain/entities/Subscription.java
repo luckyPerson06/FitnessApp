@@ -29,9 +29,6 @@ public class Subscription {
     @Column(nullable = false, length = 100, unique = true)
     private String name;
 
-    @Column(length = 500)
-    private String description;
-
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 

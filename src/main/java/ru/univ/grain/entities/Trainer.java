@@ -29,7 +29,7 @@ public class Trainer {
     @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @Column(name = "photo_path", length = 255)
+    @Column(name = "photo_path", columnDefinition = "TEXT")
     private String photoPath;
 
     @Column(length = 2000)

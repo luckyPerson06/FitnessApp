@@ -33,7 +33,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(final RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email уже зарегистрирован");
+            throw new DuplicateResourceException("Такой Email уже зарегистрирован");
         }
 
         final Client client = Client.builder()

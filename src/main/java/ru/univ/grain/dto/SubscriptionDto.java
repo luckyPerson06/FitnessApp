@@ -10,6 +10,7 @@ import ru.univ.grain.entities.SubscriptionStatus;
 import ru.univ.grain.entities.SubscriptionType;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,12 +20,14 @@ import java.math.BigDecimal;
 @Schema(description = "Запрос на создание/обновление абонемента")
 public class SubscriptionDto {
 
+    @Schema(description = "ID абонемента", example = "1")
+    private Long id;
+
+    private List<Long> workoutTypeIds;
+
     @Schema(description = "Название абонемента", example = "Базовый", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Название абонемента обязательно")
     private String name;
-
-    @Schema(description = "Описание абонемента", example = "8 посещений в месяц")
-    private String description;
 
     @Schema(description = "Цена абонемента", example = "3000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Цена абонемента обязательна")

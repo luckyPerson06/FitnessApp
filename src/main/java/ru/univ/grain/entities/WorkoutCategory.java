@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public enum WorkoutCategory {
     GROUP("Групповые"),
+    MINI_GROUP("Мини группа (до 4 человек)"),
     INDIVIDUAL("Индивидуальные"),
-    SPECIAL("Спецпрограммы"),
-    ALL("Все типы");
+    SPECIAL("Спецпрограммы");
 
     private String displayName;
 }

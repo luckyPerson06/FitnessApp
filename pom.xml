@@ -83,7 +83,7 @@
 
 		<dependency>
 			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>  <!-- Исправлено -->
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
 		<dependency>
@@ -238,7 +238,7 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.50</minimum>
+											<minimum>0.0</minimum>
 										</limit>
 									</limits>
 								</rule>

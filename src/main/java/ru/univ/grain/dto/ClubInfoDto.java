@@ -3,6 +3,8 @@ package ru.univ.grain.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,23 +34,10 @@ public class ClubInfoDto {
     @Schema(description = "Координаты для карты", example = "52.1234,26.5678")
     private String mapCoordinates;
 
-    @Schema(description = "Путь к логотипу", example = "/images/logo.png")
-    private String logoPath;
 
-    @Schema(description = "Путь к главному изображению", example = "/images/hero.jpg")
-    private String heroImagePath;
-
-    @Schema(description = "Ссылка на Instagram", example = "https://instagram.com/kvetka")
-    private String instagramUrl;
-
-    @Schema(description = "Ссылка на Telegram", example = "https://t.me/kvetka")
-    private String telegramUrl;
-
-    @Schema(description = "Ссылка на VK", example = "https://vk.com/kvetka")
-    private String vkUrl;
-
-    @Schema(description = "WhatsApp телефон", example = "+375291234567")
-    private String whatsappPhone;
+    @Schema(description = "Ссылки на социальные сети",
+            example = "{\"instagram\": \"https://instagram.com/kvetka\", \"telegram\": \"https://t.me/kvetka\"}")
+    private Map<String, String> socialLinks;
 
     @Schema(description = "SEO заголовок", example = "Фитнес-студия KVETKA в Пинске")
     private String seoTitle;

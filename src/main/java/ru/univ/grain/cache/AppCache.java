@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,7 +15,7 @@ public class AppCache {
 
     @SuppressWarnings("unchecked")
     public <T> T get(CacheKey key) {
-        CacheEntry<?> entry = cache.get(key);
+        final CacheEntry<?> entry = cache.get(key);
         if (entry == null) {
             return null;
         }
@@ -30,7 +29,7 @@ public class AppCache {
     }
 
     public <T> void put(CacheKey key, T value) {
-        CacheEntry<T> entry = new CacheEntry<>(value, key.getRegion().getTtlMinutes());
+        final CacheEntry<T> entry = new CacheEntry<>(value, key.getRegion().getTtlMinutes());
         cache.put(key, entry);
         log.debug("Cache put for key: {}", key);
     }
@@ -71,7 +70,7 @@ public class AppCache {
     }
 
     public Map<CacheRegion, Integer> getStats() {
-        Map<CacheRegion, Integer> stats = new ConcurrentHashMap<>();
+        final Map<CacheRegion, Integer> stats = new ConcurrentHashMap<>();
         for (CacheRegion region : CacheRegion.values()) {
             stats.put(region, 0);
         }

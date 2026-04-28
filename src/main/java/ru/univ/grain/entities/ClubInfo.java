@@ -2,6 +2,11 @@ package ru.univ.grain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Entity
 @Table(name = "club_info")
@@ -16,7 +21,6 @@ public class ClubInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
     @Column(name = "about_text", columnDefinition = "TEXT")
     private String aboutText;
 
@@ -35,26 +39,10 @@ public class ClubInfo {
     @Column(name = "map_coordinates", length = 100)
     private String mapCoordinates;
 
-    @Column(name = "logo_path", length = 255)
-    private String logoPath;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "social_links", columnDefinition = "jsonb")
+    private Map<String, String> socialLinks = new HashMap<>();
 
-    @Column(name = "hero_image_path", length = 255)
-    private String heroImagePath;
-
-    // Социальные сети
-    @Column(name = "instagram_url", length = 255)
-    private String instagramUrl;
-
-    @Column(name = "telegram_url", length = 255)
-    private String telegramUrl;
-
-    @Column(name = "vk_url", length = 255)
-    private String vkUrl;
-
-    @Column(name = "whatsapp_phone", length = 20)
-    private String whatsappPhone;
-
-    // SEO поля
     @Column(name = "seo_title", length = 100)
     private String seoTitle;
 

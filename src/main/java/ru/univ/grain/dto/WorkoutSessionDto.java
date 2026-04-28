@@ -15,8 +15,11 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "Запрос на создание/обновление тренировки")
+@Schema(description = "Тренировка")
 public class WorkoutSessionDto {
+
+    @Schema(description = "ID тренировки", example = "1")
+    private Long id;
 
     @Schema(description = "ID тренера", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
@@ -33,15 +36,15 @@ public class WorkoutSessionDto {
     @Schema(description = "Конкретная дата (для разовых тренировок)", example = "2026-04-14")
     private LocalDate sessionDate;
 
-    @Schema(description = "Время начала", example = "10:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Время начала", example = "09:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Время начала обязательно")
     private LocalTime startTime;
 
-    @Schema(description = "Время окончания", example = "11:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Время окончания", example = "10:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Время окончания обязательно")
     private LocalTime endTime;
 
-    @Schema(description = "Максимальное количество участников", example = "10", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Максимальное количество участников", example = "12", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Максимальное количество участников обязательно")
     @Min(value = 1, message = "Максимальное количество участников должно быть не менее 1")
     private Integer maxParticipants;
@@ -57,4 +60,7 @@ public class WorkoutSessionDto {
 
     @Schema(description = "Повторять до даты", example = "2026-06-30")
     private LocalDate recurringUntil;
+
+    @Schema(description = "Название зала", example = "ЗЕМЛЯ")
+    private String room;
 }

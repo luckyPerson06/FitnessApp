@@ -6,15 +6,20 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.univ.grain.cache.AppCache;
 import ru.univ.grain.cache.CacheKey;
 import ru.univ.grain.cache.CacheRegion;
+import ru.univ.grain.dto.TrainerDto;
 import ru.univ.grain.dto.WorkoutTypeDto;
-import ru.univ.grain.entities.WorkoutCategory;
+import ru.univ.grain.entities.Subscription;
+import ru.univ.grain.entities.Trainer;
 import ru.univ.grain.entities.WorkoutType;
 import ru.univ.grain.exception.BusinessException;
 import ru.univ.grain.exception.DuplicateResourceException;
 import ru.univ.grain.exception.ResourceNotFoundException;
+import ru.univ.grain.mapper.TrainerMapper;
 import ru.univ.grain.mapper.WorkoutTypeMapper;
+import ru.univ.grain.repositories.TrainerRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,7 +27,9 @@ import java.util.List;
 public class WorkoutTypeService {
 
     private final WorkoutTypeRepository workoutTypeRepository;
+    private final TrainerRepository trainerRepository;
     private final WorkoutTypeMapper workoutTypeMapper;
+    private final TrainerMapper trainerMapper;
     private final AppCache appCache;
 
     private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
@@ -70,13 +77,6 @@ public class WorkoutTypeService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutTypeDto> getWorkoutTypesByCategory(final WorkoutCategory category) {
-        return workoutTypeRepository.findByCategory(category).stream()
-                .map(workoutTypeMapper::toDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<WorkoutTypeDto> getWorkoutTypesByTrainer(final Long trainerId) {
         return workoutTypeRepository.findByTrainerId(trainerId).stream()
                 .map(workoutTypeMapper::toDto)
@@ -97,6 +97,7 @@ public class WorkoutTypeService {
                 });
 
         final WorkoutType workoutType = workoutTypeMapper.toEntity(dto);
+        setTrainers(workoutType, dto.getTrainerIds());
         final WorkoutType saved = workoutTypeRepository.save(workoutType);
 
         appCache.clearRegion(CacheRegion.WORKOUT_TYPES);
@@ -118,8 +119,9 @@ public class WorkoutTypeService {
         }
 
         workoutTypeMapper.updateEntity(dto, existing);
-        final WorkoutType updated = workoutTypeRepository.save(existing);
+        setTrainers(existing, dto.getTrainerIds());
 
+        final WorkoutType updated = workoutTypeRepository.save(existing);
         appCache.clearRegion(CacheRegion.WORKOUT_TYPES);
         return workoutTypeMapper.toDto(updated);
     }
@@ -141,13 +143,49 @@ public class WorkoutTypeService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(WORKOUT_TYPE_NOT_FOUND, id)));
 
-        if (!workoutType.getTrainers().isEmpty() ||
-                !workoutType.getSubscriptions().isEmpty() ||
-                !workoutType.getWorkoutSessions().isEmpty()) {
+        if (!workoutType.getWorkoutSessions().isEmpty()) {
             throw new BusinessException(WORKOUT_TYPE_IN_USE);
         }
 
+        for (Trainer trainer : workoutType.getTrainers()) {
+            trainer.getSpecializations().remove(workoutType);
+        }
+        workoutType.getTrainers().clear();
+
+        for (Subscription subscription : workoutType.getSubscriptions()) {
+            subscription.getAllowedWorkoutTypes().remove(workoutType);
+        }
+        workoutType.getSubscriptions().clear();
+
         workoutTypeRepository.delete(workoutType);
         appCache.clearRegion(CacheRegion.WORKOUT_TYPES);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TrainerDto> getTrainersByWorkoutType(final Long workoutTypeId) {
+        final WorkoutType workoutType = workoutTypeRepository.findById(workoutTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Тип тренировки не найден"));
+        return workoutType.getTrainers().stream()
+                .map(trainerMapper::toDto)
+                .toList();
+    }
+
+    private void setTrainers(WorkoutType workoutType, List<Long> trainerIds) {
+        if (workoutType.getTrainers() == null) {
+            workoutType.setTrainers(new ArrayList<>());
+        }
+
+        for (Trainer trainer : workoutType.getTrainers()) {
+            trainer.getSpecializations().remove(workoutType);
+        }
+        workoutType.getTrainers().clear();
+
+        if (trainerIds != null && !trainerIds.isEmpty()) {
+            final List<Trainer> trainers = trainerRepository.findAllById(trainerIds);
+            for (Trainer trainer : trainers) {
+                trainer.getSpecializations().add(workoutType);
+            }
+            workoutType.getTrainers().addAll(trainers);
+        }
     }
 }

@@ -13,6 +13,9 @@ import ru.univ.grain.entities.TrainerStatus;
 @Schema(description = "Запрос на создание/обновление тренера")
 public class TrainerDto {
 
+    @Schema(description = "ID тренера", example = "1")
+    private Long id;
+
     @Schema(description = "Имя тренера", example = "Анна", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Имя тренера обязательно")
     private String firstName;

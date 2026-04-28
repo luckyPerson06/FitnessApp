@@ -60,4 +60,8 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             @Param("dayOfWeek") DayOfWeek dayOfWeek,
             @Param("start") LocalTime start,
             @Param("end") LocalTime end);
+
+    List<WorkoutSession> findByWorkoutTypeIdAndSessionDateGreaterThanEqualOrderBySessionDateAscStartTimeAsc(
+            Long workoutTypeId, LocalDate date);
+
 }

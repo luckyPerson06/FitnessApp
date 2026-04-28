@@ -1,5 +1,6 @@
 package ru.univ.grain.services;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +16,9 @@ import ru.univ.grain.exception.DuplicateResourceException;
 import ru.univ.grain.exception.ResourceNotFoundException;
 import ru.univ.grain.mapper.SubscriptionMapper;
 import ru.univ.grain.repositories.SubscriptionRepository;
-import ru.univ.grain.repositories.VisitRepository;
 import ru.univ.grain.repositories.WorkoutTypeRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -26,13 +27,19 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final WorkoutTypeRepository workoutTypeRepository;
-    private final VisitRepository visitRepository;
     private final SubscriptionMapper subscriptionMapper;
     private final AppCache appCache;
 
     private static final String SUBSCRIPTION_NOT_FOUND = "Абонемент с id %d не найден";
     private static final String SUBSCRIPTION_NAME_EXISTS = "Абонемент с названием '%s' уже существует";
     private static final String WORKOUT_TYPE_NOT_FOUND = "Тип тренировки с id %d не найден";
+
+    private SubscriptionService self;
+
+    @PostConstruct
+    public void init() {
+        this.self = this;
+    }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getAllSubscriptions() {
@@ -83,23 +90,24 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getActiveSubscriptions() {
-        return getSubscriptionsByStatus(SubscriptionStatus.ACTIVE);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getExpiredSubscriptions() {
-        return getSubscriptionsByStatus(SubscriptionStatus.EXPIRED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.EXPIRED);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getCancelledSubscriptions() {
-        return getSubscriptionsByStatus(SubscriptionStatus.CANCELLED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.CANCELLED);
     }
 
     @Transactional(readOnly = true)
     public List<SubscriptionDto> getUsedSubscriptions() {
-        return getSubscriptionsByStatus(SubscriptionStatus.USED);
+        return self.getSubscriptionsByStatus(SubscriptionStatus.USED);
     }
+
 
     @Transactional
     public SubscriptionDto createSubscription(final SubscriptionDto dto) {
@@ -110,6 +118,7 @@ public class SubscriptionService {
                 });
 
         final Subscription subscription = subscriptionMapper.toEntity(dto);
+        setWorkoutTypes(subscription, dto.getWorkoutTypeIds());
         final Subscription saved = subscriptionRepository.save(subscription);
 
         appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
@@ -131,6 +140,7 @@ public class SubscriptionService {
         }
 
         subscriptionMapper.updateEntity(dto, existing);
+        setWorkoutTypes(existing, dto.getWorkoutTypeIds());
         final Subscription updated = subscriptionRepository.save(existing);
 
         appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
@@ -192,4 +202,22 @@ public class SubscriptionService {
         subscriptionRepository.save(subscription);
         appCache.clearRegion(CacheRegion.SUBSCRIPTIONS);
     }
+
+    private void setWorkoutTypes(Subscription subscription, List<Long> workoutTypeIds) {
+        if (subscription.getAllowedWorkoutTypes() == null) {
+            subscription.setAllowedWorkoutTypes(new ArrayList<>());
+        }
+        for (WorkoutType wt : subscription.getAllowedWorkoutTypes()) {
+            wt.getSubscriptions().remove(subscription);
+        }
+        subscription.getAllowedWorkoutTypes().clear();
+        if (workoutTypeIds != null && !workoutTypeIds.isEmpty()) {
+            final List<WorkoutType> types = workoutTypeRepository.findAllById(workoutTypeIds);
+            for (WorkoutType wt : types) {
+                wt.getSubscriptions().add(subscription);
+            }
+            subscription.getAllowedWorkoutTypes().addAll(types);
+        }
+    }
+
 }

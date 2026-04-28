@@ -14,8 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.univ.grain.dto.ApiError;
+import ru.univ.grain.dto.TrainerDto;
 import ru.univ.grain.dto.WorkoutTypeDto;
-import ru.univ.grain.entities.WorkoutCategory;
 import ru.univ.grain.services.WorkoutTypeService;
 
 import java.util.List;
@@ -57,13 +57,6 @@ public class WorkoutTypeController {
     @GetMapping("/active")
     public ResponseEntity<List<WorkoutTypeDto>> getActiveWorkoutTypes() {
         return ResponseEntity.ok(workoutTypeService.getActiveWorkoutTypes());
-    }
-
-    @Operation(summary = "Получить типы тренировок по категории")
-    @GetMapping("/category/{category}")
-    public ResponseEntity<List<WorkoutTypeDto>> getWorkoutTypesByCategory(
-            @Parameter(description = "Категория", example = "GROUP") @PathVariable final WorkoutCategory category) {
-        return ResponseEntity.ok(workoutTypeService.getWorkoutTypesByCategory(category));
     }
 
     @Operation(summary = "Получить типы тренировок тренера")
@@ -132,4 +125,11 @@ public class WorkoutTypeController {
             @Parameter(description = "Название типа тренировки", example = "Йога") @PathVariable final String name) {
         return ResponseEntity.ok(workoutTypeService.existsByName(name));
     }
+
+    @Operation(summary = "Получить тренеров по типу тренировки")
+    @GetMapping("/{id}/trainers")
+    public ResponseEntity<List<TrainerDto>> getTrainersByWorkoutType(@PathVariable final Long id) {
+        return ResponseEntity.ok(workoutTypeService.getTrainersByWorkoutType(id));
+    }
+
 }
