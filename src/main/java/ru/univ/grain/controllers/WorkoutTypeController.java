@@ -22,7 +22,7 @@ import java.util.List;
 
 @Tag(name = "Типы тренировок", description = "Управление типами тренировок")
 @RestController
-@RequestMapping("/api/workout-types")
+    @RequestMapping("/api/workout-types")
 @RequiredArgsConstructor
 public class WorkoutTypeController {
 
