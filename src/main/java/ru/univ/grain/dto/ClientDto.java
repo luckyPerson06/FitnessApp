@@ -6,7 +6,6 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Schema(description = "Запрос на создание клиента")
 public class ClientDto extends BaseClientRequest {
