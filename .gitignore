@@ -1,4 +1,5 @@
 HELP.md
+
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -11,6 +12,7 @@ application-*.properties
 *.env
 *.yml
 !application.yml
+!.github/workflows/*.yml
 *.log
 postgresql.log
 pg_log/
