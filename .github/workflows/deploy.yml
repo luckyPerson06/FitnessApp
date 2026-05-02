@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build, Test and Deploy
 
 on:
   push:
@@ -32,10 +32,26 @@ jobs:
       - name: Install & Build
         run: cd grain-frontend && npm ci && npm run build
 
-  healthcheck:
+  deploy-backend:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
+      - name: Trigger Render Backend Deploy
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}"
+
+  deploy-frontend:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Frontend Deploy
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}"
+
+  healthcheck:
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deploy
+        run: sleep 120
       - name: Healthcheck API
         run: curl -f https://grain-api.onrender.com/actuator/health
       - name: Healthcheck Frontend
