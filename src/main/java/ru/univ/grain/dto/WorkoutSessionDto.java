@@ -55,6 +55,7 @@ public class WorkoutSessionDto {
     @Schema(description = "Цветовой код для календаря", example = "#FF5733")
     private String colorCode;
 
+    @Builder.Default
     @Schema(description = "Повторяющаяся тренировка", example = "true")
     private Boolean isRecurring = true;
 

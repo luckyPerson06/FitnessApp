@@ -30,6 +30,7 @@ public class TrainerDto {
     @Schema(description = "Описание тренера", example = "Опытный тренер по йоге")
     private String description;
 
+    @Builder.Default
     @Schema(description = "Статус тренера", example = "ACTIVE")
     private TrainerStatus status = TrainerStatus.ACTIVE;
 }

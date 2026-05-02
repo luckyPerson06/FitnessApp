@@ -52,6 +52,7 @@ public class Visit {
     @Column(nullable = false, length = 20)
     private VisitStatus status;
 
+    @Builder.Default
     @Version
     private Integer version = 0;
 

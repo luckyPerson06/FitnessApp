@@ -31,6 +31,7 @@ public class WorkoutTypeDto {
     @Schema(description = "Путь к иконке", example = "/icons/soft-strength.png")
     private String iconPath;
 
+    @Builder.Default
     @Schema(description = "Активен ли тип тренировки", example = "true")
     private Boolean isActive = true;
 

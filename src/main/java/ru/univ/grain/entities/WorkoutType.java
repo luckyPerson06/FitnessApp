@@ -45,6 +45,7 @@ public class WorkoutType {
     @Column(name = "contraindications", length = 1000)
     private String contraindications;
 
+    @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "benefits", columnDefinition = "jsonb")
     private List<String> benefits = new ArrayList<>();

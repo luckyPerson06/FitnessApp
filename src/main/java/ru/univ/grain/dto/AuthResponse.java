@@ -15,6 +15,7 @@ public class AuthResponse {
     @Schema(description = "JWT токен для доступа к API", example = "eyJhbGciOiJIUzI1NiJ9...")
     private String token;
 
+    @Builder.Default
     @Schema(description = "Тип токена", example = "Bearer")
     private String tokenType = "Bearer";
 

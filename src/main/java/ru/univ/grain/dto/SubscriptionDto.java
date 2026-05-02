@@ -46,6 +46,7 @@ public class SubscriptionDto {
     @Min(value = 1, message = "Срок действия должен быть не менее 1 дня")
     private Integer durationDays;
 
+    @Builder.Default
     @Schema(description = "Статус абонемента", example = "ACTIVE")
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 }

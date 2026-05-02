@@ -43,6 +43,7 @@ public class User implements UserDetails, Serializable {
     @Transient
     private transient Client client;
 
+    @Builder.Default
     @Column(name = "is_enabled", nullable = false)
     private boolean isEnabled = true;
 

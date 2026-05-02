@@ -39,6 +39,7 @@ public class ClubInfo {
     @Column(name = "map_coordinates", length = 100)
     private String mapCoordinates;
 
+    @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "social_links", columnDefinition = "jsonb")
     private Map<String, String> socialLinks = new HashMap<>();

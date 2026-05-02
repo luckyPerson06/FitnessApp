@@ -31,6 +31,7 @@ public class VisitDto {
     @FutureOrPresent(message = "Время визита не может быть в прошлом")
     private LocalDateTime visitTime;
 
+    @Builder.Default
     @Schema(description = "Статус визита", example = "BOOKED")
     private VisitStatus status = VisitStatus.BOOKED;
 }

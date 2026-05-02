@@ -60,6 +60,7 @@ public class WorkoutSession {
     @Column(name = "color_code", length = 7)
     private String colorCode;
 
+    @Builder.Default
     @Column(name = "is_recurring", nullable = false)
     private boolean isRecurring = true;
 
@@ -74,6 +75,7 @@ public class WorkoutSession {
             cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Visit> visits = new ArrayList<>();
 
+    @Builder.Default
     @Version
     private Integer version = 0;
 

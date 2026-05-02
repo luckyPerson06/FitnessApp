@@ -112,34 +112,44 @@ const editIconBtn = {
 };
 
 const EditIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
 );
 
 const PhoneIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.primaryDark} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke={colors.primaryDark} strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
     </svg>
 );
 
 const EmailIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.primaryDark} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke={colors.primaryDark} strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
         <polyline points="22,6 12,13 2,6" />
     </svg>
 );
 
 const ClockIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.primaryDark} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke={colors.primaryDark} strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
     </svg>
 );
 
 const InstagramIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.primaryDark} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke={colors.primaryDark} strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
         <circle cx="12" cy="12" r="5" />
         <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="2" />
@@ -237,16 +247,16 @@ function Home() {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_BODY, color: colors.textMuted, fontSize: '16px' }}>
+            <div style={{
+                minHeight: '60vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: FONT_BODY,
+                color: colors.textMuted,
+                fontSize: '16px',
+            }}>
                 Загрузка...
-            </div>
-        );
-    }
-
-    if (!clubInfo) {
-        return (
-            <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_BODY, color: colors.textMuted, fontSize: '16px' }}>
-                Информация о клубе пока не добавлена
             </div>
         );
     }
@@ -255,7 +265,12 @@ function Home() {
         <>
             <div style={{ padding: `${SPACING.sm} ${SPACING.sm} 0` }}>
                 <div style={containerStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: SPACING.xs,
+                    }}>
                         <h1 style={{
                             fontSize: 'clamp(34px, 7vw, 48px)',
                             fontWeight: '300',
@@ -266,6 +281,37 @@ function Home() {
                         }}>
                             KVETKA
                         </h1>
+                        {isAdmin && !editing && (
+                            <button
+                                type="button"
+                                onClick={handleEdit}
+                                style={editIconBtn}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        colors.primaryDark;
+                                    e.currentTarget.style.color = '#FFFFFF';
+                                }}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        colors.primaryDark;
+                                    e.currentTarget.style.color = '#FFFFFF';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        'rgba(255,255,255,0.6)';
+                                    e.currentTarget.style.color =
+                                        colors.primaryDark;
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        'rgba(255,255,255,0.6)';
+                                    e.currentTarget.style.color =
+                                        colors.primaryDark;
+                                }}
+                            >
+                                <EditIcon />
+                            </button>
+                        )}
                     </div>
                     <p style={{
                         color: colors.textMuted,
@@ -281,12 +327,30 @@ function Home() {
                     </p>
 
                     {error && (
-                        <div style={{ padding: '12px 16px', backgroundColor: '#FFF0F0', borderRadius: '10px', color: colors.error, fontFamily: FONT_BODY, fontSize: '14px', marginBottom: SPACING.sm, textAlign: 'center' }}>
+                        <div style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#FFF0F0',
+                            borderRadius: '10px',
+                            color: colors.error,
+                            fontFamily: FONT_BODY,
+                            fontSize: '14px',
+                            marginBottom: SPACING.sm,
+                            textAlign: 'center',
+                        }}>
                             {error}
                         </div>
                     )}
                     {success && (
-                        <div style={{ padding: '12px 16px', backgroundColor: '#F0F7F0', borderRadius: '10px', color: colors.success, fontFamily: FONT_BODY, fontSize: '14px', marginBottom: SPACING.sm, textAlign: 'center' }}>
+                        <div style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#F0F7F0',
+                            borderRadius: '10px',
+                            color: colors.success,
+                            fontFamily: FONT_BODY,
+                            fontSize: '14px',
+                            marginBottom: SPACING.sm,
+                            textAlign: 'center',
+                        }}>
                             {success}
                         </div>
                     )}
@@ -295,67 +359,207 @@ function Home() {
                         <div style={{ ...cardStyle, marginBottom: SPACING.lg }}>
                             <div style={{ display: 'grid', gap: SPACING.sm }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>О клубе</label>
-                                    <textarea name="aboutText" value={form.aboutText} onChange={handleChange} style={textareaStyle} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        О клубе
+                                    </label>
+                                    <textarea
+                                        name="aboutText"
+                                        value={form.aboutText}
+                                        onChange={handleChange}
+                                        style={textareaStyle}
+                                    />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Адрес</label>
-                                    <input name="address" value={form.address} onChange={handleChange} style={inputStyle} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        Адрес
+                                    </label>
+                                    <input
+                                        name="address"
+                                        value={form.address}
+                                        onChange={handleChange}
+                                        style={inputStyle}
+                                    />
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: SPACING.sm }}>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns:
+                                        'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: SPACING.sm,
+                                }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Телефон</label>
-                                        <input name="phone" value={form.phone} onChange={handleChange} style={inputStyle} />
+                                        <label style={{
+                                            display: 'block',
+                                            marginBottom: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            fontFamily: FONT_BODY,
+                                            color: colors.textSecondary,
+                                        }}>
+                                            Телефон
+                                        </label>
+                                        <input
+                                            name="phone"
+                                            value={form.phone}
+                                            onChange={handleChange}
+                                            style={inputStyle}
+                                        />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Email</label>
-                                        <input name="email" value={form.email} onChange={handleChange} style={inputStyle} />
+                                        <label style={{
+                                            display: 'block',
+                                            marginBottom: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            fontFamily: FONT_BODY,
+                                            color: colors.textSecondary,
+                                        }}>
+                                            Email
+                                        </label>
+                                        <input
+                                            name="email"
+                                            value={form.email}
+                                            onChange={handleChange}
+                                            style={inputStyle}
+                                        />
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Часы работы</label>
-                                    <input name="workingHours" value={form.workingHours} onChange={handleChange} style={inputStyle} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        Часы работы
+                                    </label>
+                                    <input
+                                        name="workingHours"
+                                        value={form.workingHours}
+                                        onChange={handleChange}
+                                        style={inputStyle}
+                                    />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Координаты для карты</label>
-                                    <input name="mapCoordinates" value={form.mapCoordinates} onChange={handleChange} style={inputStyle} placeholder="52.1234,26.5678" />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        Координаты для карты
+                                    </label>
+                                    <input
+                                        name="mapCoordinates"
+                                        value={form.mapCoordinates}
+                                        onChange={handleChange}
+                                        style={inputStyle}
+                                        placeholder="52.1234,26.5678"
+                                    />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>Instagram</label>
-                                    <input name="instagramUrl" value={form.instagramUrl} onChange={handleChange} style={inputStyle} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        Instagram
+                                    </label>
+                                    <input
+                                        name="instagramUrl"
+                                        value={form.instagramUrl}
+                                        onChange={handleChange}
+                                        style={inputStyle}
+                                    />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>SEO заголовок</label>
-                                    <input name="seoTitle" value={form.seoTitle} onChange={handleChange} style={inputStyle} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        SEO заголовок
+                                    </label>
+                                    <input
+                                        name="seoTitle"
+                                        value={form.seoTitle}
+                                        onChange={handleChange}
+                                        style={inputStyle}
+                                    />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', fontFamily: FONT_BODY, color: colors.textSecondary }}>SEO описание</label>
-                                    <textarea name="seoDescription" value={form.seoDescription} onChange={handleChange} style={{ ...textareaStyle, minHeight: '60px' }} />
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        fontFamily: FONT_BODY,
+                                        color: colors.textSecondary,
+                                    }}>
+                                        SEO описание
+                                    </label>
+                                    <textarea
+                                        name="seoDescription"
+                                        value={form.seoDescription}
+                                        onChange={handleChange}
+                                        style={{ ...textareaStyle, minHeight: '60px' }}
+                                    />
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: SPACING.sm, justifyContent: 'flex-end', marginTop: SPACING.md }}>
-                                <button type="button" onClick={handleCancel} style={btnDanger}>Отмена</button>
-                                <button type="button" onClick={handleSave} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.7 : 1 }}>
+                            <div style={{
+                                display: 'flex',
+                                gap: SPACING.sm,
+                                justifyContent: 'flex-end',
+                                marginTop: SPACING.md,
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    style={btnDanger}
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    style={{
+                                        ...btnPrimary,
+                                        opacity: saving ? 0.7 : 1,
+                                    }}
+                                >
                                     {saving ? 'Сохранение...' : 'Сохранить'}
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <>
-                            {clubInfo.aboutText && (
+                            {clubInfo?.aboutText && (
                                 <div style={{ marginBottom: SPACING.lg }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs }}>
-                                        <h2 style={headingStyle}>О клубе</h2>
-                                        {isAdmin && (
-                                            <button type="button" onClick={handleEdit} style={editIconBtn}
-                                                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = colors.primaryDark; e.currentTarget.style.color = '#FFFFFF'; }}
-                                                    onFocus={(e) => { e.currentTarget.style.backgroundColor = colors.primaryDark; e.currentTarget.style.color = '#FFFFFF'; }}
-                                                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.6)'; e.currentTarget.style.color = colors.primaryDark; }}
-                                                    onBlur={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.6)'; e.currentTarget.style.color = colors.primaryDark; }}>
-                                                <EditIcon />
-                                            </button>
-                                        )}
-                                    </div>
+                                    <h2 style={headingStyle}>О клубе</h2>
                                     <p style={{
                                         fontSize: 'clamp(15px, 2.5vw, 18px)',
                                         lineHeight: 1.7,
@@ -376,34 +580,66 @@ function Home() {
 
             {!editing && (
                 <>
-                    <div style={{ padding: `0 ${SPACING.sm} ${SPACING.lg}` }}>
-                        <div style={{ ...containerStyle, maxWidth: '720px' }}>
-                            <div style={cardStyle}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs }}>
+                    {clubInfo && (clubInfo.phone || clubInfo.email
+                        || clubInfo.workingHours
+                        || clubInfo.socialLinks?.instagram) && (
+                        <div style={{ padding: `0 ${SPACING.sm} ${SPACING.lg}` }}>
+                            <div style={{ ...containerStyle, maxWidth: '720px' }}>
+                                <div style={cardStyle}>
                                     <h2 style={headingStyle}>Контакты</h2>
-                                </div>
-
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                                    gap: SPACING.xs,
-                                }}>
-                                    {clubInfo.phone && <ContactItem icon={<PhoneIcon />} text={clubInfo.phone} href={`tel:${clubInfo.phone}`} />}
-                                    {clubInfo.email && <ContactItem icon={<EmailIcon />} text={clubInfo.email} href={`mailto:${clubInfo.email}`} />}
-                                    {clubInfo.workingHours && <ContactItem icon={<ClockIcon />} text={clubInfo.workingHours} />}
-                                    {clubInfo.socialLinks?.instagram && <ContactItem icon={<InstagramIcon />} text="Instagram" href={clubInfo.socialLinks.instagram} external />}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns:
+                                            'repeat(auto-fit, minmax(220px, 1fr))',
+                                        gap: SPACING.xs,
+                                    }}>
+                                        {clubInfo.phone && (
+                                            <ContactItem
+                                                icon={<PhoneIcon />}
+                                                text={clubInfo.phone}
+                                                href={`tel:${clubInfo.phone}`}
+                                            />
+                                        )}
+                                        {clubInfo.email && (
+                                            <ContactItem
+                                                icon={<EmailIcon />}
+                                                text={clubInfo.email}
+                                                href={`mailto:${clubInfo.email}`}
+                                            />
+                                        )}
+                                        {clubInfo.workingHours && (
+                                            <ContactItem
+                                                icon={<ClockIcon />}
+                                                text={clubInfo.workingHours}
+                                            />
+                                        )}
+                                        {clubInfo.socialLinks?.instagram && (
+                                            <ContactItem
+                                                icon={<InstagramIcon />}
+                                                text="Instagram"
+                                                href={
+                                                    clubInfo.socialLinks.instagram
+                                                }
+                                                external
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    {clubInfo.mapCoordinates && clubInfo.address && (
-                        <div style={{ padding: `0 ${SPACING.sm} ${SPACING.lg}` }}>
-                            <div style={{ ...containerStyle, maxWidth: '820px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACING.xs }}>
-                                    <h2 style={headingStyle}>Где мы находимся</h2>
-
-                                </div>
+                    {clubInfo?.mapCoordinates && clubInfo?.address && (
+                        <div style={{
+                            padding: `0 ${SPACING.sm} ${SPACING.lg}`,
+                        }}>
+                            <div style={{
+                                ...containerStyle,
+                                maxWidth: '820px',
+                            }}>
+                                <h2 style={headingStyle}>
+                                    Где мы находимся
+                                </h2>
                                 <p style={{
                                     textAlign: 'center',
                                     fontFamily: FONT_BODY,
@@ -413,9 +649,23 @@ function Home() {
                                 }}>
                                     {clubInfo.address}
                                 </p>
-                                <div style={{ ...cardStyle, overflow: 'hidden', padding: '0', aspectRatio: '16/7', minHeight: '270px' }}>
-                                    <iframe title="Карта" src={`https://maps.google.com/maps?q=${clubInfo.mapCoordinates}&z=16&output=embed`}
-                                            width="100%" height="100%" style={{ border: 'none' }} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                                <div style={{
+                                    ...cardStyle,
+                                    overflow: 'hidden',
+                                    padding: '0',
+                                    aspectRatio: '16/7',
+                                    minHeight: '270px',
+                                }}>
+                                    <iframe
+                                        title="Карта"
+                                        src={`https://maps.google.com/maps?q=${clubInfo.mapCoordinates}&z=16&output=embed`}
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: 'none' }}
+                                        allowFullScreen=""
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -429,18 +679,42 @@ function Home() {
 const ContactItem = ({ icon, text, href, external }) => {
     const content = (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-            borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.5)',
-            fontFamily: FONT_BODY, fontSize: 'clamp(14px, 2vw, 15px)',
-            color: colors.textSecondary, minHeight: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(255,255,255,0.5)',
+            fontFamily: FONT_BODY,
+            fontSize: 'clamp(14px, 2vw, 15px)',
+            color: colors.textSecondary,
+            minHeight: '48px',
         }}>
-            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</span>
+            <span style={{
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+            }}>
+                {icon}
+            </span>
             <span style={{ lineHeight: 1.5 }}>{text}</span>
         </div>
     );
     if (href) {
-        return <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
-                  style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>{content}</a>;
+        return (
+            <a
+                href={href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
+                style={{
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    display: 'block',
+                }}
+            >
+                {content}
+            </a>
+        );
     }
     return content;
 };
